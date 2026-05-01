@@ -1,0 +1,17 @@
+services:
+  rdf_create_tools:
+    container_name: rdf_create_tools
+    build: .
+    volumes:
+      - ${DATA_SOURCE_DIRECTORY:-data/source}:/data/source
+      - ${RDF_DATA_DIRECTORY:-./data/rdf}:/data/rdf
+      # 以下開発用
+      - ./script:/app
+  test-virtuoso:
+    container_name: test-virtuoso
+    image: openlink/virtuoso-opensource-7:7.2.12
+    environment:
+      DBA_PASSWORD: ${DBA_PASSWORD}
+      TZ: ${DBA_PASSWORD:-Asia/Tokyo}
+    volumes:
+      - ${RDF_DATA_DIRECTORY:-./data/rdf}:/rdf_data
