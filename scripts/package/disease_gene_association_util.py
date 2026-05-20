@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import re
 from pathlib import Path
 import csv
-import re
 import xml.etree.ElementTree as ET
 
 from rdflib import Graph, Literal, Namespace, URIRef
-from rdflib.namespace import DCTERMS, RDF, RDFS
+from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS
 import duckdb
 
 from package.rdf_build_support import (
@@ -168,8 +168,8 @@ def load_hgnc_to_ncbi_map(path: str | Path) -> dict[str, str]:
 
 # gencc-submissions.tsvとhgncidのdxrefを紐づけ
 def load_gencc_submission_records(
-    gencc_submissions_path: str | Path = GENCC_SUBMISSIONS_PATH,
-    ncbi_gene_info_path: str | Path = NCBI_GENE_INFO_PATH,
+    gencc_submissions_path: str,
+    ncbi_gene_info_path: str,
 ) -> list[GenCCSubmissionRecord]:
     hgnc_to_ncbi_map = load_hgnc_to_ncbi_map(ncbi_gene_info_path)
     records: list[GenCCSubmissionRecord] = []
@@ -265,12 +265,14 @@ def load_gencc_definitive_associations() -> GenCCAssociations:
 
 
 def load_gencc_associations(
+    ncbigene_gene_info_path: str,
+    mondo_owl_path: str,
     allowed_classification_curies: set[str] | None,
     *,
     project_mondo_to_mapped_diseases: bool,
 ) -> GenCCAssociations:
-    hgnc_to_ncbi_map = load_hgnc_to_ncbi_map(NCBI_GENE_INFO_PATH)
-    mondo_mapping = load_configured_mondo_mapping()
+    hgnc_to_ncbi_map = load_hgnc_to_ncbi_map(ncbigene_gene_info_path)
+    mondo_mapping = load_mondo_mapping_from_owl(mondo_owl_path)
     associations = GenCCAssociations()
 
     with open_text_reader(GENCC_SUBMISSIONS_PATH) as reader:
@@ -353,14 +355,7 @@ def add_original_disease_association(
             "GenCC",
         )
 
-
-def load_configured_mondo_mapping() -> MondoMapping:
-    path = Path(MONDO_OWL_PATH)
-    if path.suffix.lower() == ".obo":
-        return load_mondo_mapping_from_obo(path)
-    return load_mondo_mapping_from_owl(path)
-
-
+# TODO: 
 def load_mondo_mapping_from_owl(mondo_owl_path: str | Path) -> MondoMapping:
     mapping = MondoMapping()
     graph = Graph()
@@ -383,63 +378,6 @@ def load_mondo_mapping_from_owl(mondo_owl_path: str | Path) -> MondoMapping:
             add_to_mapping(mapping.mondo_to_orpha, mondo_id, orpha_id)
             add_to_mapping(mapping.orpha_to_mondo, orpha_id, mondo_id)
 
-    return mapping
-
-
-def load_mondo_mapping_from_obo(mondo_obo_path: str | Path) -> MondoMapping:
-    mapping = MondoMapping()
-    current_mondo_id: str | None = None
-    current_is_deprecated = False
-
-    def flush_term() -> None:
-        return None
-
-    with open_text_reader(mondo_obo_path) as reader:
-        for raw_line in reader:
-            line = raw_line.strip()
-            if line == "[Term]":
-                flush_term()
-                current_mondo_id = None
-                current_is_deprecated = False
-                continue
-            if line.startswith("[") and line.endswith("]"):
-                flush_term()
-                current_mondo_id = None
-                current_is_deprecated = False
-                continue
-
-            if line.startswith("id: MONDO:"):
-                mondo_id = line.removeprefix("id: MONDO:")
-                current_mondo_id = mondo_id if mondo_id.isdigit() else None
-                current_is_deprecated = False
-                continue
-
-            if current_mondo_id is None:
-                continue
-
-            if line == "is_obsolete: true":
-                current_is_deprecated = True
-                continue
-
-            if current_is_deprecated:
-                continue
-            if not line.startswith("xref: ") or 'source="MONDO:equivalentTo"' not in line:
-                continue
-
-            omim_match = re.match(r"^xref: OMIM:(\d+)\b", line)
-            if omim_match:
-                omim_id = omim_match.group(1)
-                add_to_mapping(mapping.mondo_to_omim, current_mondo_id, omim_id)
-                add_to_mapping(mapping.omim_to_mondo, omim_id, current_mondo_id)
-                continue
-
-            orpha_match = re.match(r"^xref: Orphanet:(\d+)\b", line)
-            if orpha_match:
-                orpha_id = orpha_match.group(1)
-                add_to_mapping(mapping.mondo_to_orpha, current_mondo_id, orpha_id)
-                add_to_mapping(mapping.orpha_to_mondo, orpha_id, current_mondo_id)
-
-    flush_term()
     return mapping
 
 
@@ -518,9 +456,10 @@ def add_projected_mondo_associations(
                 add_association(mondo_associations, mondo_id, ncbi_id, source)
 
 
+# TODO:
 def build_mondo_gene_associations() -> AssociationMap:
     gencc_associations = load_gencc_definitive_associations()
-    mondo_mapping = load_configured_mondo_mapping()
+    mondo_mapping = load_mondo_mapping_from_owl()
     omim_ncbi_gene_map = load_omim_gene_associations(MEDGEN_MIM2GENE_PATH)
     orphanet_ncbi_gene_map = load_orphanet_gene_associations(NCBI_GENE_INFO_PATH, ORPHANET_PRODUCT6_PATH)
 
@@ -677,29 +616,20 @@ def add_to_mapping(mapping: dict[str, list[str]], key: str, value: str) -> None:
     if value not in values:
         values.append(value)
 
-
-def extract_mondo_id_from_uri_line(line: str) -> str | None:
+def extract_mondo_id_from_uri(uri: str) -> str | None:
     marker = "http://purl.obolibrary.org/obo/MONDO_"
-    start = line.find(marker)
+    start = uri.find(marker)
     if start < 0:
         return None
+    return re.search(r'http://purl.obolibrary.org/obo/MONDO_(\d+)', uri).group(1)
 
-    value_start = start + len(marker)
-    value_end = value_start
-    while value_end < len(line) and line[value_end].isdigit():
-        value_end += 1
-    return line[value_start:value_end] if value_end > value_start else None
-
-
-def extract_uri_value(line: str) -> str | None:
-    prefix = 'rdf:resource="'
-    start = line.find(prefix)
-    if start < 0:
-        return None
-
-    value_start = start + len(prefix)
-    value_end = line.find('"', value_start)
-    return line[value_start:value_end] if value_end > value_start else None
+def is_deprecated_resource(graph: Graph, uri: URIRef) -> bool:
+    for value in graph.objects(uri, OWL.deprecated):
+        if value.toPython() is True:
+            return True
+        if str(value).strip().lower() == "true":
+            return True
+    return False
 
 
 def extract_omim_id(uri: str) -> str | None:

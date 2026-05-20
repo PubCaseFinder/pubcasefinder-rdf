@@ -1,7 +1,6 @@
 from pathlib import Path
 from rdflib import Graph, RDF, DCTERMS, Literal
 
-import pytest
 from package import disease_gene_association_util
 
 ncbi_content = """\
@@ -20,6 +19,28 @@ hgnc_submission_content = """\
 "GENCC_000101-HGNC_16636-OMIM_171300-HP_0000006-GENCC_100003"	"HGNC:7"	"KIF1B"	"MONDO:0008233"	"pheochromocytoma"	"OMIM:171300"	"{Pheochromocytoma, susceptibility to}"	"GENCC:100003"	"Moderate"	"HP:0000006"	"Autosomal dominant"	"GENCC:000101"	"Ambry Genetics"	"HGNC:16636"	"KIF1B"	"OMIM:171300"	"Pheochromocytoma"	"HP:0000006"	"Autosomal dominant inheritance"	"GENCC:000101"	"Ambry Genetics"	"GENCC:100003"	"Moderate"	"2019-12-04 13:30:43"	""	""	""	"PMID: 28106320"	"69237"	"2020-12-24"
 "GENCC_000101-HGNC_16636-OMIM_118210-HP_0000006-GENCC_100004"	"HGNC:7645"	"KIF1B"	"MONDO:0007308"	"Charcot-Marie-Tooth disease type 2A1"	"OMIM:118210"	"Charcot-Marie-Tooth disease, type 2A1"	"GENCC:100004"	"Limited"	"HP:0000006"	"Autosomal dominant"	"GENCC:000101"	"Ambry Genetics"	"HGNC:16636"	"KIF1B"	"OMIM:118210"	"Charcot-Marie-Tooth disease, type 2A1"	"HP:0000006"	"Autosomal dominant inheritance"	"GENCC:000101"	"Ambry Genetics"	"GENCC:100004"	"Limited"	"2024-10-15 12:08:25"	""	""	""	"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5655771/"	"61327"	"2025-01-17"
 "GENCC_000101-HGNC_17939-OMIM_617532-HP_0000007-GENCC_100004"	"HGNC:15"	"SLC45A1"	"MONDO:0044322"	"intellectual developmental disorder with neuropsychiatric features"	"OMIM:617532"	"Intellectual developmental disorder with neuropsychiatric features"	"GENCC:100004"	"Limited"	"HP:0000007"	"Autosomal recessive"	"GENCC:000101"	"Ambry Genetics"	"HGNC:17939"	"SLC45A1"	"OMIM:617532"	"Intellectual developmental disorder with neuropsychiatric features"	"HP:0000007"	"Autosomal recessive inheritance"	"GENCC:000101"	"Ambry Genetics"	"GENCC:100004"	"Limited"	"2024-09-26 12:08:38"	""	""	""	"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5655771/"	"17305"	"2025-01-17"
+"""
+
+mondo_owl_content = """\
+<?xml version="1.0"?>
+<rdf:RDF
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#">
+    <owl:Class rdf:about="http://purl.obolibrary.org/obo/MONDO_0008426">
+        <skos:exactMatch rdf:resource="https://omim.org/entry/182212"/>
+        <skos:exactMatch rdf:resource="http://www.orpha.net/ORDO/Orphanet_2462"/>
+        <skos:exactMatch rdf:resource="http://identifiers.org/mesh/D004194"/>
+    </owl:Class>
+    <owl:Class rdf:about="http://purl.obolibrary.org/obo/MONDO_0008233">
+        <skos:exactMatch rdf:resource="https://omim.org/entry/171300"/>
+    </owl:Class>
+    <owl:Class rdf:about="http://purl.obolibrary.org/obo/MONDO_9999999">
+        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <skos:exactMatch rdf:resource="https://omim.org/entry/999999"/>
+        <skos:exactMatch rdf:resource="http://www.orpha.net/ORDO/Orphanet_999999"/>
+    </owl:Class>
+</rdf:RDF>
 """
 
 def mock_load_hgnc_to_ncbi_map(_path):
@@ -226,3 +247,8 @@ where {
         value = row[1]
 
         assert value in expect_rdf_map[key]
+
+def test_extract_mondo_id_from_uri():
+    mock_uri = '    <!-- http://purl.obolibrary.org/obo/MONDO_8000034 -->'
+    result = disease_gene_association_util.extract_mondo_id_from_uri(mock_uri)
+    assert result == '8000034'

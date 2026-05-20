@@ -2,15 +2,20 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from utils.log_util import get_logger
+from rdf_build_support import (
+    load_config
+)
 from scripts.package.disease_gene_association_util import (
     GENCC_SOURCE_URI,
-    RDF_DIR,
     build_mondo_gene_associations,
     write_gene_association_ttl,
 )
 
+logger = get_logger()
 
 def main() -> None:
+    config = load_config('config.ini')
     mondo_ncbi_gene_map = build_mondo_gene_associations()
     print(f"MONDO_Gene_Association Count : {len(mondo_ncbi_gene_map)}")
 
@@ -20,7 +25,7 @@ def main() -> None:
         "GenCC": GENCC_SOURCE_URI,
     }
     write_gene_association_ttl(
-        Path(RDF_DIR) / "MONDO_Gene_Association.ttl",
+        config['rdf_output_dir'] / "MONDO_Gene_Association.ttl",
         mondo_ncbi_gene_map,
         "MONDO",
         "obo:MONDO_",
