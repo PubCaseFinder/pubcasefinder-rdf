@@ -4,6 +4,9 @@ import configparser
 import gzip
 from pathlib import Path
 from typing import Iterable, TextIO
+from utils.log_util import get_logger
+
+logger = get_logger()
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -26,50 +29,52 @@ DEFAULT_RESOURCE_ROOTS = {
 def dotted_to_snake(key: str) -> str:
     return key.replace(".", "_")
 
-
+# config pathを与えてconfigを読み取りディクショナリで返す
 def load_config(config_path: str | Path | None = None) -> dict[str, str]:
-    path = _find_config_path(config_path)
+    path = Path(config_path)
     if path is None:
+        logger.error('Missing required config path')
         return {}
 
-    text = path.read_text(encoding="utf-8")
-    parser = configparser.ConfigParser()
+    if not path.exists():
+        logger.error('File is not exist: %s', path)
+        return {}
 
-    if "[DEFAULT]" in text or any(line.strip().startswith("[") for line in text.splitlines()):
-        parser.read_string(text)
-        return {key: value for key, value in parser.defaults().items()}
+    default_config = {
+        'ncbigene_file_path': '../data/source/NCBIGene/latest/Homo_sapiens.gene_info',
+        'ncbigene_summary_path': '../data/source/NCBIGene/latest/gene_summary.tsv',
+        'omim_mim2gene_data_uri': '../data/source/OMIM/latest/mim2gene.txt',
+        'medgen_mim2gene_path': '../data/source/MedGen/latest/mim2gene_medgen.txt',
+        'medgen_omim_hpo_path': '../data/source/MedGen/latest/MedGen_HPO_OMIM_Mapping.txt.gz',
+        'orphanet_product4_path': '../data/source/Orphanet/latest/en_product4.xml',
+        'orphanet_product6_path': '../data/source/Orphanet/latest/en_product6.xml',
+        'mondo_owl_path': '../data/source/MONDO/latest/mondo-international.owl',
+        'gencc_submissions_path': '../data/source/GenCC/latest/gencc-submissions.tsv',
+        'panelsearch_association_path': '../data/source/PanelSearch/latest/nando_gene_association.txt',
+        'panelsearch_manual_path': '../data/source/PanelSearch/latest/shitei_gene_all_250819.txt',
+        'hpo_phenotype_path': '../data/source/HPO/latest/phenotype.hpoa',
+        'hpo_inheritance_ja_path': '../data/source/HPO/latest/HPO_Inheritance_en_jp.txt',
+        'hpo_japanese_path': '../data/source/HPO/latest/HPO-japanese.alpha.21Jul2023.tsv',
+        'kegg_disease_path': '../data/source/KEGG/latest/KEGG_disease.tsv',
+        'genereviews_omim_path': '../data/source/GeneReviews/latest/NBKid_shortname_OMIM.txt',
+        'ncbigene_dir': '../data/source/NCBIGene/latest',
+        'medgen_dir': '../data/source/MedGen/latest',
+        'orphanet_dir': '../data/source/Orphanet/latest',
+        'mondo_dir': '../data/source/MONDO/latest',
+        'gencc_dir': '../data/source/GenCC/latest',
+        'panelsearch_dir': '../data/source/PanelSearch/latest',
+        'omim_dir': '../data/source/OMIM/latest',
+        'kegg_dir': '../data/source/KEGG/latest',
+        'genereviews_dir': '../data/source/GeneReviews/latest',
+        'hpo_dir': '../data/source/HPO/latest',
+        'rdf_output_dir': '../data/rdf',
+    }
 
-    config: dict[str, str] = {}
-    for raw_line in text.splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or line.startswith("!"):
-            continue
-        separator = "=" if "=" in line else ":"
-        if separator not in line:
-            continue
-        key, value = line.split(separator, 1)
-        config[key.strip()] = value.strip()
+    parser = configparser.ConfigParser(default_config)
+    parser.read(path, encoding='utf-8')
+    config = dict(parser['Override'])
+
     return config
-
-
-def _find_config_path(config_path: str | Path | None) -> Path | None:
-    if config_path is not None:
-        path = Path(config_path)
-        return path if path.exists() else None
-
-    candidates = [
-        Path("config.ini"),
-        REPO_ROOT / "config.ini",
-        SCRIPT_DIR / "config.ini",
-        Path("pcf-rdf.properties"),
-        REPO_ROOT / "pcf-rdf.properties",
-        SCRIPT_DIR / "pcf-rdf.properties",
-    ]
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    return None
-
 
 def trim_to_none(value: str | None) -> str | None:
     if value is None:

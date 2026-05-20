@@ -2,7 +2,7 @@
 # Leave values empty to auto-discover the newest dated folder under each resource root.
 
 # Full file path overrides take precedence when provided.
-[DEFAULT]
+[Override]
 ncbigene_file_path=
 ncbigene_summary_path=
 ncbigene_datasets_path=
