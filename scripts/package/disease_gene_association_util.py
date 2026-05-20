@@ -187,7 +187,12 @@ def load_gencc_submission_records(
             read_csv('{gencc_submissions_path}', delim='\\t')
         """
     res = con.execute(query_statement)
-    for row in res:
+    while True:
+        row = res.fetchone()
+
+        if row is None:
+            break
+
         gencc_id = row[0].strip()
         hgnc_id  = row[1].strip().removeprefix('HGNC:')
         disease_curie = row[2].strip()
