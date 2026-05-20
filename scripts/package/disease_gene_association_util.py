@@ -612,8 +612,8 @@ def to_hpo_uri(hpo_curie: str | None) -> URIRef | None:
     hpo_id = hpo_curie.removeprefix('HP:')
     return OBO[f"HP_{hpo_id}"] if hpo_id else None
 
-
 def add_to_mapping(mapping: dict[str, list[str]], key: str, value: str) -> None:
+    # もし既存のキーが存在していたら、上書きせずに要素を作成する.valuesにはkeyに対してdictionaryのvalueが入る.
     values = mapping.setdefault(key, [])
     if value not in values:
         values.append(value)
@@ -647,8 +647,4 @@ def extract_orphanet_id(uri: str) -> str | None:
     if start < 0:
         return None
 
-    start += len(marker)
-    end = start
-    while end < len(uri) and uri[end].isdigit():
-        end += 1
-    return uri[start:end] if end > start else None
+    return re.search(rf'{marker}(\d+)', uri).group(1)

@@ -257,3 +257,8 @@ def test_extract_omim_id():
     mock_uri = '<skos:exactMatch rdf:resource="https://omim.org/entry/607948"/>'
     result = disease_gene_association_util.extract_omim_id(mock_uri)
     assert result == '607948'
+
+def test_extract_orphanet_id():
+    mock_uri = '<skos:exactMatch rdf:resource="http://www.orpha.net/ORDO/Orphanet_377788"/>'
+    result = disease_gene_association_util.extract_orphanet_id(mock_uri)
+    assert result == '377788'
