@@ -52,6 +52,25 @@ def mock_load_hgnc_to_ncbi_map(_path):
         '15': '11'
     }
 
+def mock_load_mondo_mapping_from_owl(_path):
+    return disease_gene_association_util.MondoMapping(
+        mondo_to_omim = {
+            '0008426': ['182212'],
+            '0008233': ['171300'],
+        },
+        mondo_to_orpha = {
+            '0008426': ['2462'],
+        },
+        omim_to_mondo = {
+            '182212': ['0008426'],
+            '171300': ['0008233'],
+        },
+        orpha_to_mondo = {
+            '2462': ['0008426'],
+        }
+    )
+
+
 def create_mock_file(path: str, content: str):
     source_path = Path(path)
     source_path.parent.mkdir(parents=True, exist_ok=True)
@@ -138,6 +157,70 @@ def test_load_gencc_submission_records(mocker, tmp_path):
     ]
 
     assert records == expect_records
+
+def test_load_gencc_associations(mocker, tmp_path):
+    ncbigene_gene_info_path = (tmp_path / 'Homo_sapiens.gene_info').as_posix()
+    mondo_owl_path = (tmp_path / 'mondo-international.owl').as_posix()
+    gencc_submissions_path = (tmp_path / 'gencc-submissions.tsv').as_posix()
+
+    mocker.patch.object(disease_gene_association_util, 'load_hgnc_to_ncbi_map', mock_load_hgnc_to_ncbi_map)
+    mocker.patch.object(disease_gene_association_util, 'load_mondo_mapping_from_owl', mock_load_mondo_mapping_from_owl)
+
+    create_mock_file(ncbigene_gene_info_path, '')
+    create_mock_file(mondo_owl_path, '')
+    create_mock_file(gencc_submissions_path, hgnc_submission_content)
+
+    associations = disease_gene_association_util.load_gencc_associations(
+        ncbigene_gene_info_path,
+        mondo_owl_path,
+        gencc_submissions_path,
+        {"GENCC:100001"},
+        project_mondo_to_mapped_diseases=True
+    )
+
+    print(associations)
+    assert associations.omim_associations == {
+        '182212\t1': ['GenCC'],
+    }
+    assert associations.orphanet_associations == {
+        '2462\t1': ['GenCC'],
+    }
+    assert associations.mondo_associations == {
+        '0008426\t1': ['GenCC'],
+    }
+
+def test_add_original_disease_association():
+    associations = disease_gene_association_util.GenCCAssociations()
+    cases = [
+        {
+            'ncbi_id': '2103',
+            'original_disease_curie': 'OMIM:608565',
+        },
+        {
+            'ncbi_id': '83636',
+            'original_disease_curie': 'Orphanet:289560',
+        },
+        {
+            'ncbi_id': '652',
+            'original_disease_curie': 'MONDO:0100613',
+        }
+    ]
+    for case in cases:
+        disease_gene_association_util.add_original_disease_association(
+            associations,
+            case['ncbi_id'],
+            case['original_disease_curie']
+        )
+
+    assert associations.mondo_associations == {
+        '0100613\t652': ['GenCC'],
+    }
+    assert associations.omim_associations == {
+        '608565\t2103': ['GenCC'],
+    }
+    assert associations.orphanet_associations == {
+        '289560\t83636': ['GenCC'],
+    }
 
 def test_load_mondo_mapping_from_owl(tmp_path):
     mondo_owl_path = (tmp_path / 'mondo-international.owl').as_posix()

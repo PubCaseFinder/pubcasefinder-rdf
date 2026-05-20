@@ -260,13 +260,24 @@ def load_omim_gene_associations(path: str | Path) -> AssociationMap:
     return associations
 
 
-def load_gencc_definitive_associations() -> GenCCAssociations:
-    return load_gencc_associations({"GENCC:100001"}, project_mondo_to_mapped_diseases=True)
+def load_gencc_definitive_associations(
+    ncbigene_gene_info_path: str,
+    mondo_owl_path: str,
+    gencc_submissions_path: str,
+) -> GenCCAssociations:
+    # 遺伝子と疾患の関係性が確実なもののみを取り扱う
+    return load_gencc_associations(
+        ncbigene_gene_info_path,
+        mondo_owl_path,
+        gencc_submissions_path,
+        {"GENCC:100001"}, project_mondo_to_mapped_diseases=True
+    )
 
-
+# gencc-submissions.tsvとmondo-international.owlからncbiの遺伝子IDとmondo, omim, orphanetのidを紐づける
 def load_gencc_associations(
     ncbigene_gene_info_path: str,
     mondo_owl_path: str,
+    gencc_submissions_path: str,
     allowed_classification_curies: set[str] | None,
     *,
     project_mondo_to_mapped_diseases: bool,
@@ -275,55 +286,57 @@ def load_gencc_associations(
     mondo_mapping = load_mondo_mapping_from_owl(mondo_owl_path)
     associations = GenCCAssociations()
 
-    with open_text_reader(GENCC_SUBMISSIONS_PATH) as reader:
-        delimiter = "," if str(GENCC_SUBMISSIONS_PATH).lower().endswith(".csv") else "\t"
-        rows = csv.reader(reader, delimiter=delimiter)
-        next(rows, None)
-        for split in rows:
-            if len(split) <= 7:
-                continue
+    con = duckdb.connect()
+    query_statement = f"""
+        select
+            gene_curie,
+            disease_curie,
+            disease_original_curie,
+            classification_curie,
+        from
+            read_csv('{gencc_submissions_path}', delim='\\t')
+        """
+    res = con.execute(query_statement)
+    while True:
+        row = res.fetchone()
 
-            hgnc_id = normalize_curie_value(split[1], "HGNC:")
-            disease_curie = normalize_value(split[3])
-            original_disease_curie = normalize_value(split[5])
-            classification_curie = normalize_value(split[7])
+        if row is None:
+            break
 
-            if allowed_classification_curies is not None and classification_curie not in allowed_classification_curies:
-                continue
+        hgnc_id = normalize_curie_value(row[0], "HGNC:")
+        disease_curie = normalize_value(row[1])
+        original_disease_curie = normalize_value(row[2])
+        classification_curie = normalize_value(row[3])
 
-            ncbi_id = hgnc_to_ncbi_map.get(hgnc_id)
-            if ncbi_id is None:
-                continue
+        if allowed_classification_curies is not None and classification_curie not in allowed_classification_curies:
+            continue
 
-            if original_disease_curie and ":" in original_disease_curie:
-                add_original_disease_association(associations, ncbi_id, original_disease_curie)
-            elif disease_curie is not None and disease_curie.startswith("MONDO:"):
-                add_association(
-                    associations.mondo_associations,
-                    normalize_curie_value(disease_curie, "MONDO:"),
+        ncbi_id = hgnc_to_ncbi_map.get(hgnc_id)
+        if ncbi_id is None:
+            continue
+
+        if original_disease_curie and ":" in original_disease_curie:
+            add_original_disease_association(associations, ncbi_id, original_disease_curie)
+
+        if disease_curie is not None and disease_curie.startswith("MONDO:"):
+            mondo_id = normalize_curie_value(disease_curie, "MONDO:")
+            add_association(associations.mondo_associations, mondo_id, ncbi_id, "GenCC")
+
+            if project_mondo_to_mapped_diseases:
+                project_gene_to_mapped_diseases(
+                    associations.omim_associations,
+                    mondo_mapping.mondo_to_omim,
+                    mondo_id,
                     ncbi_id,
                     "GenCC",
                 )
-
-            if disease_curie is not None and disease_curie.startswith("MONDO:"):
-                mondo_id = normalize_curie_value(disease_curie, "MONDO:")
-                add_association(associations.mondo_associations, mondo_id, ncbi_id, "GenCC")
-
-                if project_mondo_to_mapped_diseases:
-                    project_gene_to_mapped_diseases(
-                        associations.omim_associations,
-                        mondo_mapping.mondo_to_omim,
-                        mondo_id,
-                        ncbi_id,
-                        "GenCC",
-                    )
-                    project_gene_to_mapped_diseases(
-                        associations.orphanet_associations,
-                        mondo_mapping.mondo_to_orpha,
-                        mondo_id,
-                        ncbi_id,
-                        "GenCC",
-                    )
+                project_gene_to_mapped_diseases(
+                    associations.orphanet_associations,
+                    mondo_mapping.mondo_to_orpha,
+                    mondo_id,
+                    ncbi_id,
+                    "GenCC",
+                )
 
     return associations
 
