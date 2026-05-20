@@ -364,7 +364,9 @@ def load_mondo_mapping_from_owl(mondo_owl_path: str | Path) -> MondoMapping:
     # 主述が完全一致のものを取得
     for mondo_uri, _, exact_match_uri in graph.triples((None, SKOS.exactMatch, None)):
         mondo_id = extract_mondo_id_from_uri(str(mondo_uri))
-        if mondo_id is None or is_deprecated_resource(graph, mondo_uri):
+        if mondo_id is None:
+            continue
+        if is_deprecated_resource(graph, mondo_uri):
             continue
 
         exact_match = str(exact_match_uri)
@@ -635,13 +637,7 @@ def extract_omim_id(uri: str) -> str | None:
         start = uri.find(marker)
         if start < 0:
             continue
-
-        start += len(marker)
-        end = start
-        while end < len(uri) and uri[end].isdigit():
-            end += 1
-        if end > start:
-            return uri[start:end]
+        return re.search(rf'{marker}(\d+)', uri).group(1)
     return None
 
 

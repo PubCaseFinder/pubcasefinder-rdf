@@ -252,3 +252,8 @@ def test_extract_mondo_id_from_uri():
     mock_uri = '    <!-- http://purl.obolibrary.org/obo/MONDO_8000034 -->'
     result = disease_gene_association_util.extract_mondo_id_from_uri(mock_uri)
     assert result == '8000034'
+
+def test_extract_omim_id():
+    mock_uri = '<skos:exactMatch rdf:resource="https://omim.org/entry/607948"/>'
+    result = disease_gene_association_util.extract_omim_id(mock_uri)
+    assert result == '607948'
