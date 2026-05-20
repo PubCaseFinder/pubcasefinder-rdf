@@ -70,8 +70,6 @@ def test_load_config(tmp_path):
 
     config = rdf_build_support.load_config(config_path)
 
-    print('configは:')
-    print(config)
     assert config['ncbigene_file_path'] == source_root + '/NCBIGene/latest/Homo_sapiens.gene_info'
     assert config['ncbigene_dir'] == source_root + '/NCBIGene/latest'
 

@@ -1,4 +1,5 @@
 from pathlib import Path
+from rdflib import Graph, RDF, DCTERMS, Literal
 
 import pytest
 from package import disease_gene_association_util
@@ -116,3 +117,91 @@ def test_load_gencc_submission_records(mocker, tmp_path):
     ]
 
     assert records == expect_records
+
+def test_write_gencc_gene_association_ttl(tmp_path):
+    output_path = Path(tmp_path)
+    output_path.mkdir(parents=True, exist_ok=True)
+    mock_records = [
+        disease_gene_association_util.GenCCSubmissionRecord(
+            association_uri=disease_gene_association_util.GENE_CONTEXT[
+                'disease:OMIM:182212/gene:ENT:1'
+            ],
+            disease_uri=disease_gene_association_util.MIM['182212'],
+            gene_uri=disease_gene_association_util.NCBIGENE['1'],
+            submission_uri=disease_gene_association_util.GENCC[
+                'GENCC_000101-HGNC_10896-OMIM_182212-HP_0000006-GENCC_100001'
+            ],
+            classification_title='Definitive',
+            inheritance_uri=disease_gene_association_util.OBO['HP_0000006'],
+            submitter_label='Ambry Genetics',
+        ),
+        disease_gene_association_util.GenCCSubmissionRecord(
+            association_uri=disease_gene_association_util.GENE_CONTEXT[
+                'disease:OMIM:171300/gene:ENT:2'
+            ],
+            disease_uri=disease_gene_association_util.MIM['171300'],
+            gene_uri=disease_gene_association_util.NCBIGENE['2'],
+            submission_uri=disease_gene_association_util.GENCC[
+                'GENCC_000101-HGNC_16636-OMIM_171300-HP_0000006-GENCC_100003'
+            ],
+            classification_title='Moderate',
+            inheritance_uri=disease_gene_association_util.OBO['HP_0000006'],
+            submitter_label='Ambry Genetics',
+        ),
+        disease_gene_association_util.GenCCSubmissionRecord(
+            association_uri=disease_gene_association_util.GENE_CONTEXT[
+                'disease:OMIM:118210/gene:ENT:9'
+            ],
+            disease_uri=disease_gene_association_util.MIM['118210'],
+            gene_uri=disease_gene_association_util.NCBIGENE['9'],
+            submission_uri=disease_gene_association_util.GENCC[
+                'GENCC_000101-HGNC_16636-OMIM_118210-HP_0000006-GENCC_100004'
+            ],
+            classification_title='Limited',
+            inheritance_uri=disease_gene_association_util.OBO['HP_0000006'],
+            submitter_label='Ambry Genetics',
+        ),
+        disease_gene_association_util.GenCCSubmissionRecord(
+            association_uri=disease_gene_association_util.GENE_CONTEXT[
+                'disease:OMIM:617532/gene:ENT:11'
+            ],
+            disease_uri=disease_gene_association_util.MIM['617532'],
+            gene_uri=disease_gene_association_util.NCBIGENE['11'],
+            submission_uri=disease_gene_association_util.GENCC[
+                'GENCC_000101-HGNC_17939-OMIM_617532-HP_0000007-GENCC_100004'
+            ],
+            classification_title='Limited',
+            inheritance_uri=disease_gene_association_util.OBO['HP_0000007'],
+            submitter_label='Ambry Genetics',
+        ),
+    ]
+    output_path = Path((output_path / 'GenCC_Gene_Association.ttl').as_posix())
+    disease_gene_association_util.write_gencc_gene_association_ttl(
+        output_path,
+        mock_records
+    )
+
+    expect_rdf_map = {
+        RDF.type: [disease_gene_association_util.SIO["SIO_000983"]],
+        disease_gene_association_util.SIO["SIO_000628"]: [ disease_gene_association_util.MIM['171300'], disease_gene_association_util.NCBIGENE['2']],
+        DCTERMS.source: [disease_gene_association_util.GENCC['GENCC_000101-HGNC_16636-OMIM_171300-HP_0000006-GENCC_100003']],
+        disease_gene_association_util.OBO["IAO_0000114"]: [Literal('Moderate')]
+    }
+
+    g = Graph()
+    g.parse(output_path, format='turtle')
+    query_statement = """
+PREFIX sio: <http://semanticscience.org/resource/>
+select ?p ?o
+where {
+    <https://pubcasefinder.dbcls.jp/gene_context/disease:OMIM:171300/gene:ENT:2> ?p ?o .
+}
+"""
+
+    rows = g.query(query_statement)
+
+    for row in rows:
+        key = row[0]
+        value = row[1]
+
+        assert value in expect_rdf_map[key]
