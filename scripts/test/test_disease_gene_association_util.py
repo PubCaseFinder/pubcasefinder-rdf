@@ -118,6 +118,27 @@ def test_load_gencc_submission_records(mocker, tmp_path):
 
     assert records == expect_records
 
+def test_load_mondo_mapping_from_owl_with_rdflib(tmp_path):
+    mondo_owl_path = (tmp_path / 'mondo-international.owl').as_posix()
+    create_mock_file(mondo_owl_path, mondo_owl_content)
+
+    mapping = disease_gene_association_util.load_mondo_mapping_from_owl(mondo_owl_path)
+
+    assert mapping.mondo_to_omim == {
+        '0008426': ['182212'],
+        '0008233': ['171300'],
+    }
+    assert mapping.mondo_to_orpha == {
+        '0008426': ['2462'],
+    }
+    assert mapping.omim_to_mondo == {
+        '182212': ['0008426'],
+        '171300': ['0008233'],
+    }
+    assert mapping.orpha_to_mondo == {
+        '2462': ['0008426'],
+    }
+
 def test_write_gencc_gene_association_ttl(tmp_path):
     output_path = Path(tmp_path)
     output_path.mkdir(parents=True, exist_ok=True)

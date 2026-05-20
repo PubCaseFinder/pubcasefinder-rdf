@@ -363,47 +363,25 @@ def load_configured_mondo_mapping() -> MondoMapping:
 
 def load_mondo_mapping_from_owl(mondo_owl_path: str | Path) -> MondoMapping:
     mapping = MondoMapping()
-    current_mondo_id: str | None = None
-    current_is_deprecated = False
-    current_class_depth = 0
+    graph = Graph()
+    graph.parse(str(mondo_owl_path), format="xml")
 
-    with open_text_reader(mondo_owl_path) as reader:
-        for line in reader:
-            trimmed = line.strip()
+    # 主述が完全一致のものを取得
+    for mondo_uri, _, exact_match_uri in graph.triples((None, SKOS.exactMatch, None)):
+        mondo_id = extract_mondo_id_from_uri(str(mondo_uri))
+        if mondo_id is None or is_deprecated_resource(graph, mondo_uri):
+            continue
 
-            if current_mondo_id is not None:
-                if (
-                    trimmed
-                    == '<owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>'
-                ):
-                    current_is_deprecated = True
-                elif not current_is_deprecated and trimmed.startswith('<skos:exactMatch rdf:resource="'):
-                    exact_match_uri = extract_uri_value(trimmed)
-                    if exact_match_uri is not None:
-                        omim_id = extract_omim_id(exact_match_uri)
-                        if omim_id is not None:
-                            add_to_mapping(mapping.mondo_to_omim, current_mondo_id, omim_id)
-                            add_to_mapping(mapping.omim_to_mondo, omim_id, current_mondo_id)
+        exact_match = str(exact_match_uri)
+        omim_id = extract_omim_id(exact_match)
+        if omim_id is not None:
+            add_to_mapping(mapping.mondo_to_omim, mondo_id, omim_id)
+            add_to_mapping(mapping.omim_to_mondo, omim_id, mondo_id)
 
-                        orpha_id = extract_orphanet_id(exact_match_uri)
-                        if orpha_id is not None:
-                            add_to_mapping(mapping.mondo_to_orpha, current_mondo_id, orpha_id)
-                            add_to_mapping(mapping.orpha_to_mondo, orpha_id, current_mondo_id)
-
-                current_class_depth += trimmed.count("<owl:Class")
-                current_class_depth -= trimmed.count("</owl:Class>")
-                if current_class_depth <= 0:
-                    current_mondo_id = None
-                    current_is_deprecated = False
-                    current_class_depth = 0
-                continue
-
-            if not trimmed.startswith('<owl:Class rdf:about="http://purl.obolibrary.org/obo/MONDO_'):
-                continue
-
-            current_mondo_id = extract_mondo_id_from_uri_line(trimmed)
-            current_is_deprecated = False
-            current_class_depth = 1
+        orpha_id = extract_orphanet_id(exact_match)
+        if orpha_id is not None:
+            add_to_mapping(mapping.mondo_to_orpha, mondo_id, orpha_id)
+            add_to_mapping(mapping.orpha_to_mondo, orpha_id, mondo_id)
 
     return mapping
 
