@@ -139,7 +139,7 @@ def test_load_gencc_submission_records(mocker, tmp_path):
 
     assert records == expect_records
 
-def test_load_mondo_mapping_from_owl_with_rdflib(tmp_path):
+def test_load_mondo_mapping_from_owl(tmp_path):
     mondo_owl_path = (tmp_path / 'mondo-international.owl').as_posix()
     create_mock_file(mondo_owl_path, mondo_owl_content)
 
@@ -262,3 +262,5 @@ def test_extract_orphanet_id():
     mock_uri = '<skos:exactMatch rdf:resource="http://www.orpha.net/ORDO/Orphanet_377788"/>'
     result = disease_gene_association_util.extract_orphanet_id(mock_uri)
     assert result == '377788'
+
+

@@ -355,7 +355,6 @@ def add_original_disease_association(
             "GenCC",
         )
 
-# TODO: 
 def load_mondo_mapping_from_owl(mondo_owl_path: str | Path) -> MondoMapping:
     mapping = MondoMapping()
     graph = Graph()
@@ -646,5 +645,4 @@ def extract_orphanet_id(uri: str) -> str | None:
     start = uri.find(marker)
     if start < 0:
         return None
-
     return re.search(rf'{marker}(\d+)', uri).group(1)
