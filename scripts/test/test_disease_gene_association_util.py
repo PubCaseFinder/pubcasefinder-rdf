@@ -43,6 +43,17 @@ mondo_owl_content = """\
 </rdf:RDF>
 """
 
+mim2gen__medgen_content = """\
+#MIM number	GeneID	type	Source	MedGenCUI	Comment
+100050	-	phenotype	-	C3149220	-
+100070	-	phenotype	-	C1853365	-
+100100	1131	phenotype	 GeneMap	C0033770	-
+100200	-	phenotype	-	C4551519	-
+100300	57514	phenotype	 GeneMap	C4551482	-
+100600	-	phenotype	-	C2930792	-
+100640	216	gene	-	-	-
+"""
+
 def mock_load_hgnc_to_ncbi_map(_path):
     return {
         '5': '1',
@@ -188,6 +199,16 @@ def test_load_gencc_associations(mocker, tmp_path):
     assert associations.mondo_associations == {
         '0008426\t1': ['GenCC'],
     }
+
+def test_load_omim_gene_associations(tmp_path):
+    mim2gen__medgen_path = (tmp_path / 'mim2gene_medgen.txt').as_posix()
+    create_mock_file(mim2gen__medgen_path, mim2gen__medgen_content)
+    associations = disease_gene_association_util.load_omim_gene_associations(mim2gen__medgen_path)
+    expect_associations = {
+        '100100\t1131': ['MedGen'],
+        '100300\t57514': ['MedGen'],
+    }
+    assert associations == expect_associations
 
 def test_add_original_disease_association():
     associations = disease_gene_association_util.GenCCAssociations()

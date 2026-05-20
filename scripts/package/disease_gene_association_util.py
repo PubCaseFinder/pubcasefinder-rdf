@@ -248,15 +248,24 @@ def load_orphanet_gene_associations(
 
 def load_omim_gene_associations(path: str | Path) -> AssociationMap:
     associations: AssociationMap = {}
-    with open_text_reader(path) as reader:
-        reader.readline()
-        for line in reader:
-            try:
-                split = line.rstrip("\n").split("\t")
-                if len(split) > 2 and split[2] == "phenotype" and split[1] != "-":
-                    add_association(associations, split[0], split[1], "MedGen")
-            except Exception:
-                continue
+    con = duckdb.connect()
+    query_statement = f"""
+        select
+            cast("#MIM number" as varchar),
+            cast(GeneID as varchar)
+        from
+            read_csv('{path}', delim='\\t')
+        where
+            type = 'phenotype' and GeneID != '-'
+    """
+    res = con.execute(query_statement)
+
+    while True:
+        row = res.fetchone()
+        if row is None:
+            break
+        add_association(associations, row[0], row[1], "MedGen")
+
     return associations
 
 
@@ -394,7 +403,6 @@ def load_mondo_mapping_from_owl(mondo_owl_path: str | Path) -> MondoMapping:
 
     return mapping
 
-
 def project_gene_to_mapped_diseases(
     target_associations: AssociationMap,
     mondo_mapping: dict[str, list[str]],
@@ -471,11 +479,21 @@ def add_projected_mondo_associations(
 
 
 # TODO:
-def build_mondo_gene_associations() -> AssociationMap:
-    gencc_associations = load_gencc_definitive_associations()
-    mondo_mapping = load_mondo_mapping_from_owl()
-    omim_ncbi_gene_map = load_omim_gene_associations(MEDGEN_MIM2GENE_PATH)
-    orphanet_ncbi_gene_map = load_orphanet_gene_associations(NCBI_GENE_INFO_PATH, ORPHANET_PRODUCT6_PATH)
+def build_mondo_gene_associations(
+    ncbigene_gene_info_path: str,
+    mondo_owl_path: str,
+    gencc_submissions_path: str,
+    medgen_mim2gene_path: str,
+    orphanet_product6_path: str,
+) -> AssociationMap:
+    gencc_associations = load_gencc_definitive_associations(
+        ncbigene_gene_info_path,
+        mondo_owl_path,
+        gencc_submissions_path
+    )
+    mondo_mapping = load_mondo_mapping_from_owl(mondo_owl_path)
+    omim_ncbi_gene_map = load_omim_gene_associations(medgen_mim2gene_path)
+    orphanet_ncbi_gene_map = load_orphanet_gene_associations(ncbigene_gene_info_path, orphanet_product6_path)
 
     mondo_ncbi_gene_map: AssociationMap = {}
     add_projected_mondo_associations(
