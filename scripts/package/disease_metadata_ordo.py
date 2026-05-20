@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from disease_metadata_util import RDF_DIR, load_shared_reference_data, write_orphanet_disease_ttl
+from scripts.package.disease_metadata_util import RDF_DIR, load_shared_reference_data, write_orphanet_disease_ttl
 
 
 def main() -> None:

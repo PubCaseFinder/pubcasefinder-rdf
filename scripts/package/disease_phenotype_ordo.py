@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from disease_phenotype_association_util import (
+from scripts.package.disease_phenotype_association_util import (
     HPOA_SOURCE_URI,
     HPO_PHENOTYPE_PATH,
     ORPHANET_PRODUCT4_PATH,

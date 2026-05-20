@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 import sys
 
-from rdf_build_support import (
+from scripts.package.rdf_build_support import (
     load_config,
     open_text_reader,
     open_text_writer,

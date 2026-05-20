@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from disease_metadata_util import (
+from scripts.package.disease_metadata_util import (
     OMIM_MIM2GENE_PATH,
     RDF_DIR,
     load_omim_disease_ids,

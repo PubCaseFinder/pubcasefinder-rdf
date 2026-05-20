@@ -6,7 +6,7 @@ import csv
 import re
 import xml.etree.ElementTree as ET
 
-from rdf_build_support import (
+from scripts.package.rdf_build_support import (
     load_config,
     open_text_reader,
     open_text_writer,

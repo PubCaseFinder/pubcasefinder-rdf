@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from disease_gene_association_util import (
+from scripts.package.disease_gene_association_util import (
     RDF_DIR,
     load_gencc_submission_records,
     write_gencc_gene_association_ttl,
