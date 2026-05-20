@@ -625,8 +625,6 @@ def extract_mondo_id_from_uri(uri: str) -> str | None:
 
 def is_deprecated_resource(graph: Graph, uri: URIRef) -> bool:
     for value in graph.objects(uri, OWL.deprecated):
-        if value.toPython() is True:
-            return True
         if str(value).strip().lower() == "true":
             return True
     return False
