@@ -54,6 +54,85 @@ mim2gen__medgen_content = """\
 100640	216	gene	-	-	-
 """
 
+orphanet_product6_content = """\
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<JDBOR date="2021-12-01 04:54:36" version="1.3.14 / 4.1.7 [2021-06-23] (orientdb version)" copyright="Orphanet (c) 2021" dbserver="jdbc:sybase:Tds:canard.orpha.net:2020">
+  <Availability> 
+    <Licence>
+      <FullName lang="en">Creative Commons Attribution 4.0 International</FullName>
+      <ShortIdentifier>CC-BY-4.0</ShortIdentifier>
+      <LegalCode>https://creativecommons.org/licenses/by/4.0/legalcode</LegalCode>
+    </Licence>
+  </Availability>
+  <DisorderList count="3884">
+    <Disorder id="17601">
+      <OrphaCode>166024</OrphaCode>
+      <ExpertLink lang="en">http://www.orpha.net/consor/cgi-bin/OC_Exp.php?lng=en&amp;Expert=166024</ExpertLink>
+      <Name lang="en">Multiple epiphyseal dysplasia, Al-Gazali type</Name>
+      <DisorderType id="21394">
+        <Name lang="en">Disease</Name>
+      </DisorderType>
+      <DisorderGroup id="36547">
+        <Name lang="en">Disorder</Name>
+      </DisorderGroup>
+      <DisorderGeneAssociationList count="1">
+        <DisorderGeneAssociation>
+          <SourceOfValidation>22587682[PMID]</SourceOfValidation>
+          <Gene id="20160">
+            <Name lang="en">kinesin family member 7</Name>
+            <Symbol>NAT2</Symbol>
+            <SynonymList count="1">
+              <Synonym lang="en">JBTS12</Synonym>
+            </SynonymList>
+            <GeneType id="25993">
+              <Name lang="en">gene with protein product</Name>
+            </GeneType>
+            <ExternalReferenceList count="6">
+              <ExternalReference id="57240">
+                <Source>Ensembl</Source>
+                <Reference>ENSG00000166813</Reference>
+              </ExternalReference>
+              <ExternalReference id="51758">
+                <Source>Genatlas</Source>
+                <Reference>KIF7</Reference>
+              </ExternalReference>
+              <ExternalReference id="51756">
+                <Source>HGNC</Source>
+                <Reference>30497</Reference>
+              </ExternalReference>
+              <ExternalReference id="51757">
+                <Source>OMIM</Source>
+                <Reference>611254</Reference>
+              </ExternalReference>
+              <ExternalReference id="97306">
+                <Source>Reactome</Source>
+                <Reference>Q2M1P5</Reference>
+              </ExternalReference>
+              <ExternalReference id="51759">
+                <Source>SwissProt</Source>
+                <Reference>Q2M1P5</Reference>
+              </ExternalReference>
+            </ExternalReferenceList>
+            <LocusList count="1">
+              <Locus id="16859">
+                <GeneLocus>15q26.1</GeneLocus>
+                <LocusKey>1</LocusKey>
+              </Locus>
+            </LocusList>
+          </Gene>
+          <DisorderGeneAssociationType id="17949">
+            <Name lang="en">Disease-causing germline mutation(s) in</Name>
+          </DisorderGeneAssociationType>
+          <DisorderGeneAssociationStatus id="17991">
+            <Name lang="en">Assessed</Name>
+          </DisorderGeneAssociationStatus>
+        </DisorderGeneAssociation>
+      </DisorderGeneAssociationList>
+    </Disorder>
+  </DisorderList>
+</JDBOR>
+"""
+
 def mock_load_hgnc_to_ncbi_map(_path):
     return {
         '5': '1',
@@ -81,6 +160,14 @@ def mock_load_mondo_mapping_from_owl(_path):
         }
     )
 
+def mock_load_ncbi_gene_symbol_map(_path):
+    return {
+        'A1BG': '1',
+        'A2M': '2',
+        'NAT1': '9',
+        'NAT2': '10',
+        'NATP': '11',
+    }
 
 def create_mock_file(path: str, content: str):
     source_path = Path(path)
@@ -212,6 +299,22 @@ def test_load_gencc_associations(mocker, tmp_path):
     assert associations.mondo_associations == {
         '0008426\t1': ['GenCC'],
     }
+
+def test_load_orphanet_gene_associations(mocker, tmp_path):
+    ncbi_gene_path = (tmp_path / 'Homo_sapiens.gene_info').as_posix()
+    orphanet_xml_path = (tmp_path / 'en_product6.xml').as_posix()
+    create_mock_file(orphanet_xml_path, orphanet_product6_content)
+    mocker.patch.object(disease_gene_association_util, 'load_ncbi_gene_symbol_map', mock_load_ncbi_gene_symbol_map)
+
+    associations = disease_gene_association_util.load_orphanet_gene_associations(
+        ncbi_gene_path,
+        orphanet_xml_path
+    )
+    expect_associations = {
+        '166024\t10': ['Orphanet']
+    }
+
+    assert associations == expect_associations
 
 def test_load_omim_gene_associations(tmp_path):
     mim2gen__medgen_path = (tmp_path / 'mim2gene_medgen.txt').as_posix()
