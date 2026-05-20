@@ -10,7 +10,7 @@ from rdflib import Graph, Literal, Namespace, URIRef
 from rdflib.namespace import DCTERMS, RDF, RDFS
 import duckdb
 
-from scripts.package.rdf_build_support import (
+from package.rdf_build_support import (
     load_config,
     open_text_reader,
     open_text_writer,
@@ -31,7 +31,7 @@ OBO = Namespace("http://purl.obolibrary.org/obo/")
 ORDO = Namespace("http://www.orpha.net/ORDO/")
 SIO = Namespace("http://semanticscience.org/resource/")
 
-CONFIG = load_config()
+CONFIG = load_config('config.ini')
 
 NCBI_GENE_INFO_PATH = resolve_configured_file(
     CONFIG,
@@ -153,10 +153,17 @@ def load_hgnc_to_ncbi_map(path: str | Path) -> dict[str, str]:
     con = duckdb.connect()
     query_statement = f"select cast(GeneID as varchar), dbXrefs from read_csv('{path}', delim='\\t')"
     res = con.execute(query_statement)
-    for row in res:
+
+    while True:
+        row = res.fetchone()
+
+        if row is None:
+            break
+
         hgnc_id = extract_hgnc_id(row[1])
         if hgnc_id is not None and hgnc_id not in hgnc_to_ncbi_map:
             hgnc_to_ncbi_map[hgnc_id] = row[0]
+
     return hgnc_to_ncbi_map
 
 # gencc-submissions.tsvとhgncidのdxrefを紐づけ
