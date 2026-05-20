@@ -88,6 +88,19 @@ def create_mock_file(path: str, content: str):
     source_path.touch()
     source_path.write_text(content)
 
+def test_load_ncbi_gene_symbol_map(tmp_path):
+    ncbi_gene_path = (tmp_path / 'Homo_sapiens.gene_info').as_posix()
+    create_mock_file(ncbi_gene_path, ncbi_content)
+    ncbi_gene_symbol_map = disease_gene_association_util.load_ncbi_gene_symbol_map(ncbi_gene_path)
+    expect_ncbi_gene_symbol_map = {
+        'A1BG': '1',
+        'A2M': '2',
+        'NAT1': '9',
+        'NAT2': '10',
+        'NATP': '11',
+    }
+    assert ncbi_gene_symbol_map == expect_ncbi_gene_symbol_map
+
 def test_load_hgnc_to_ncbi_map(tmp_path):
     ncbi_file_path = (tmp_path / 'Homo_sapiens.gene_info').as_posix()
     create_mock_file(ncbi_file_path, ncbi_content)

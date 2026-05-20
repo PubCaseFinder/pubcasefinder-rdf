@@ -138,12 +138,20 @@ GENCC_SUBMITTER_LABELS = {
 
 def load_ncbi_gene_symbol_map(path: str | Path) -> dict[str, str]:
     ncbi_gene_symbol_map: dict[str, str] = {}
-    with open_text_reader(path) as reader:
-        reader.readline()
-        for line in reader:
-            split = line.rstrip("\n").split("\t")
-            if len(split) > 2 and split[2] not in ncbi_gene_symbol_map:
-                ncbi_gene_symbol_map[split[2]] = split[1]
+    con = duckdb.connect()
+    query_statement = f"""
+        select
+            cast(GeneID as varchar),
+            Symbol
+        from read_csv('{path}', delim='\\t')
+        """
+    res = con.execute(query_statement)
+    while True:
+        row = res.fetchone()
+        if row is None:
+            break
+        if row[1] not in ncbi_gene_symbol_map:
+            ncbi_gene_symbol_map[row[1]] = row[0]
     return ncbi_gene_symbol_map
 
 
@@ -478,7 +486,6 @@ def add_projected_mondo_associations(
                 add_association(mondo_associations, mondo_id, ncbi_id, source)
 
 
-# TODO:
 def build_mondo_gene_associations(
     ncbigene_gene_info_path: str,
     mondo_owl_path: str,
@@ -493,6 +500,7 @@ def build_mondo_gene_associations(
     )
     mondo_mapping = load_mondo_mapping_from_owl(mondo_owl_path)
     omim_ncbi_gene_map = load_omim_gene_associations(medgen_mim2gene_path)
+    # TODO:
     orphanet_ncbi_gene_map = load_orphanet_gene_associations(ncbigene_gene_info_path, orphanet_product6_path)
 
     mondo_ncbi_gene_map: AssociationMap = {}
