@@ -6,6 +6,10 @@ import csv
 import re
 import xml.etree.ElementTree as ET
 
+from rdflib import Graph, Literal, Namespace, URIRef
+from rdflib.namespace import DCTERMS, RDF, RDFS
+import duckdb
+
 from scripts.package.rdf_build_support import (
     load_config,
     open_text_reader,
@@ -17,6 +21,15 @@ from scripts.package.rdf_build_support import (
 
 
 GENCC_SOURCE_URI = "https://search.thegencc.org/download/action/submissions-export-csv"
+
+GENCC = Namespace("https://search.thegencc.org/submissions/")
+GENE_CONTEXT = Namespace("https://pubcasefinder.dbcls.jp/gene_context/")
+MIM = Namespace("https://omim.org/entry/")
+NANDO = Namespace("http://nanbyodata.jp/ontology/nando#")
+NCBIGENE = Namespace("http://identifiers.org/ncbigene/")
+OBO = Namespace("http://purl.obolibrary.org/obo/")
+ORDO = Namespace("http://www.orpha.net/ORDO/")
+SIO = Namespace("http://semanticscience.org/resource/")
 
 CONFIG = load_config()
 
@@ -96,11 +109,12 @@ class GenCCAssociations:
 
 @dataclass
 class GenCCSubmissionRecord:
-    gencc_id: str
-    ncbi_gene_id: str
-    disease_curie: str
+    association_uri: URIRef
+    disease_uri: URIRef
+    gene_uri: URIRef
+    submission_uri: URIRef
     classification_title: str
-    moi_curie: str | None
+    inheritance_uri: URIRef | None
     submitter_label: str
 
 
@@ -133,21 +147,19 @@ def load_ncbi_gene_symbol_map(path: str | Path) -> dict[str, str]:
     return ncbi_gene_symbol_map
 
 
+# ncbiのHomo_sapience.gene_infoからhgncid: dxrefをマッピング
 def load_hgnc_to_ncbi_map(path: str | Path) -> dict[str, str]:
     hgnc_to_ncbi_map: dict[str, str] = {}
-    with open_text_reader(path) as reader:
-        reader.readline()
-        for line in reader:
-            split = line.rstrip("\n").split("\t")
-            if len(split) <= 5:
-                continue
-
-            hgnc_id = extract_hgnc_id(split[5])
-            if hgnc_id is not None and hgnc_id not in hgnc_to_ncbi_map:
-                hgnc_to_ncbi_map[hgnc_id] = split[1]
+    con = duckdb.connect()
+    query_statement = f"select cast(GeneID as varchar), dbXrefs from read_csv('{path}', delim='\\t')"
+    res = con.execute(query_statement)
+    for row in res:
+        hgnc_id = extract_hgnc_id(row[1])
+        if hgnc_id is not None and hgnc_id not in hgnc_to_ncbi_map:
+            hgnc_to_ncbi_map[hgnc_id] = row[0]
     return hgnc_to_ncbi_map
 
-
+# gencc-submissions.tsvとhgncidのdxrefを紐づけ
 def load_gencc_submission_records(
     gencc_submissions_path: str | Path = GENCC_SUBMISSIONS_PATH,
     ncbi_gene_info_path: str | Path = NCBI_GENE_INFO_PATH,
@@ -155,41 +167,47 @@ def load_gencc_submission_records(
     hgnc_to_ncbi_map = load_hgnc_to_ncbi_map(ncbi_gene_info_path)
     records: list[GenCCSubmissionRecord] = []
 
-    with open_text_reader(gencc_submissions_path) as reader:
-        delimiter = "," if str(gencc_submissions_path).lower().endswith(".csv") else "\t"
-        rows = csv.reader(reader, delimiter=delimiter)
-        next(rows, None)
-        for split in rows:
-            if len(split) <= 19:
-                continue
+    con = duckdb.connect()
+    query_statement = f"""
+        select
+            uuid,
+            gene_curie,
+            disease_original_curie,
+            submitted_as_submitter_id,
+            classification_title,
+            moi_curie
+        from
+            read_csv('{gencc_submissions_path}', delim='\\t')
+        """
+    res = con.execute(query_statement)
+    for row in res:
+        gencc_id = row[0].strip()
+        hgnc_id  = row[1].strip().removeprefix('HGNC:')
+        disease_curie = row[2].strip()
+        disease_reference = to_gencc_disease_reference(disease_curie)
 
-            gencc_id = normalize_value(split[0])
-            hgnc_id = normalize_curie_value(split[1], "HGNC:")
-            disease_curie = normalize_value(split[5])
-            classification_title = normalize_value(split[8]) or ""
-            moi_curie = normalize_moi_curie(normalize_value(split[9]))
-            submitter_id = normalize_value(split[19])
+        if gencc_id is None or not hgnc_id or disease_reference is None:
+            continue
 
-            if gencc_id is None or hgnc_id is None or disease_curie is None or ":" not in disease_curie:
-                continue
+        ncbi_gene_id = hgnc_to_ncbi_map.get(hgnc_id)
+        if ncbi_gene_id is None:
+            continue
 
-            ncbi_gene_id = hgnc_to_ncbi_map.get(hgnc_id)
-            if ncbi_gene_id is None:
-                continue
+        disease_path, disease_uri = disease_reference
+        submitter_id = row[3]
 
-            records.append(
-                GenCCSubmissionRecord(
-                    gencc_id=gencc_id,
-                    ncbi_gene_id=ncbi_gene_id,
-                    disease_curie=disease_curie,
-                    classification_title=classification_title,
-                    moi_curie=moi_curie,
-                    submitter_label=resolve_gencc_submitter_label(submitter_id),
-                )
+        records.append(
+            GenCCSubmissionRecord(
+                association_uri=GENE_CONTEXT[f"disease:{disease_path}/gene:ENT:{ncbi_gene_id}"],
+                disease_uri=disease_uri,
+                gene_uri=NCBIGENE[ncbi_gene_id],
+                submission_uri=GENCC[gencc_id],
+                classification_title=row[4].strip() or "",
+                inheritance_uri=to_hpo_uri(row[5]) ,
+                submitter_label=resolve_gencc_submitter_label(submitter_id),
             )
-
+        )
     return records
-
 
 def load_orphanet_gene_associations(
     ncbi_gene_path: str | Path,
@@ -582,44 +600,31 @@ def write_gencc_gene_association_ttl(
     output_path: str | Path,
     records: list[GenCCSubmissionRecord],
 ) -> None:
-    with open_text_writer(output_path) as writer:
-        writer.write("PREFIX dcterms: <http://purl.org/dc/terms/>\n")
-        writer.write("PREFIX gencc: <https://search.thegencc.org/submissions/>\n")
-        writer.write("PREFIX nando: <http://nanbyodata.jp/ontology/nando#>\n")
-        writer.write("PREFIX ncbigene: <http://identifiers.org/ncbigene/>\n")
-        writer.write("PREFIX mim: <https://omim.org/entry/>\n")
-        writer.write("PREFIX obo: <http://purl.obolibrary.org/obo/>\n")
-        writer.write("PREFIX ordo: <http://www.orpha.net/ORDO/>\n")
-        writer.write("PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n")
-        writer.write("PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n")
-        writer.write("PREFIX sio: <http://semanticscience.org/resource/>\n")
+    graph = Graph()
+    graph.bind("dcterms", DCTERMS)
+    graph.bind("gencc", GENCC)
+    graph.bind("nando", NANDO)
+    graph.bind("ncbigene", NCBIGENE)
+    graph.bind("mim", MIM)
+    graph.bind("obo", OBO)
+    graph.bind("ordo", ORDO)
+    graph.bind("rdf", RDF)
+    graph.bind("rdfs", RDFS)
+    graph.bind("sio", SIO)
 
-        for record in records:
-            disease_path = to_disease_path_segment(record.disease_curie)
-            disease_resource = to_disease_resource(record.disease_curie)
+    for record in records:
+        graph.add((record.association_uri, RDF.type, SIO["SIO_000983"]))
+        graph.add((record.association_uri, SIO["SIO_000628"], record.disease_uri))
+        graph.add((record.association_uri, SIO["SIO_000628"], record.gene_uri))
+        graph.add((record.association_uri, DCTERMS.source, record.submission_uri))
+        graph.add((record.submission_uri, OBO["IAO_0000114"], Literal(record.classification_title)))
+        if record.inheritance_uri is not None:
+            graph.add((record.submission_uri, NANDO.hasInheritance, record.inheritance_uri))
+        graph.add((record.submission_uri, DCTERMS.creator, Literal(record.submitter_label)))
 
-            if (
-                disease_path is None
-                or disease_resource is None
-                or record.ncbi_gene_id is None
-                or record.gencc_id is None
-            ):
-                continue
-
-            writer.write(
-                "<https://pubcasefinder.dbcls.jp/gene_context/"
-                f"disease:{disease_path}/gene:ENT:{record.ncbi_gene_id}>\n"
-            )
-            writer.write("    a sio:SIO_000983 ;\n")
-            writer.write(
-                f"    sio:SIO_000628 {disease_resource}, ncbigene:{record.ncbi_gene_id} ;\n"
-            )
-            writer.write(f"    dcterms:source gencc:{record.gencc_id} .\n")
-            writer.write(f"gencc:{record.gencc_id}\n")
-            writer.write(f'    obo:IAO_0000114 "{escape_turtle_literal(record.classification_title)}" ;\n')
-            if record.moi_curie:
-                writer.write(f"    nando:hasInheritance obo:{record.moi_curie} ;\n")
-            writer.write(f'    dcterms:creator "{escape_turtle_literal(record.submitter_label)}" .\n')
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    graph.serialize(destination=str(output_path), format="turtle", encoding="utf-8")
 
 
 def extract_hgnc_id(db_xrefs: str | None) -> str | None:
@@ -651,42 +656,30 @@ def normalize_curie_value(value: str | None, prefix: str) -> str:
     return normalized.removeprefix(prefix)
 
 
-def normalize_moi_curie(moi_curie: str | None) -> str | None:
-    if not moi_curie:
-        return None
-    return moi_curie.replace(":", "_")
-
-
 def resolve_gencc_submitter_label(submitter_id: str | None) -> str:
     if submitter_id is None:
         return ""
     return GENCC_SUBMITTER_LABELS.get(submitter_id, submitter_id)
 
 
-def escape_turtle_literal(value: str | None) -> str:
-    if value is None:
-        return ""
-    return value.replace("\\", "\\\\").replace('"', '\\"')
-
-
-def to_disease_path_segment(disease_curie: str | None) -> str | None:
-    if disease_curie is None:
+def to_gencc_disease_reference(disease_curie: str | None) -> tuple[str, URIRef] | None:
+    if not disease_curie:
         return None
     if disease_curie.startswith("Orphanet:"):
-        return "ORDO:" + normalize_curie_value(disease_curie, "Orphanet:")
-    return disease_curie
-
-
-def to_disease_resource(disease_curie: str | None) -> str | None:
-    if disease_curie is None:
-        return None
+        orphanet_id = disease_curie.removeprefix('Orphanet:')
+        return f"ORDO:{orphanet_id}", ORDO[f"Orphanet_{orphanet_id}"]
     if disease_curie.startswith("OMIM:"):
-        return "mim:" + normalize_curie_value(disease_curie, "OMIM:")
-    if disease_curie.startswith("Orphanet:"):
-        return "ordo:Orphanet_" + normalize_curie_value(disease_curie, "Orphanet:")
+        omim_id = disease_curie.removeprefix('OMIM:')
+        return disease_curie, MIM[omim_id]
     if disease_curie.startswith("MONDO:"):
-        return "obo:MONDO_" + normalize_curie_value(disease_curie, "MONDO:")
+        mondo_id = disease_curie.removeprefix('MONDO:')
+        return disease_curie, OBO[f"MONDO_{mondo_id}"]
     return None
+
+
+def to_hpo_uri(hpo_curie: str | None) -> URIRef | None:
+    hpo_id = hpo_curie.removeprefix('HP:')
+    return OBO[f"HP_{hpo_id}"] if hpo_id else None
 
 
 def add_to_mapping(mapping: dict[str, list[str]], key: str, value: str) -> None:
