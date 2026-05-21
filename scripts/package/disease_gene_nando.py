@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from rdflib import URIRef
+
 from scripts.package.disease_gene_association_util import (
     NANDO_ASSOCIATION_PATH,
+    NANDO_DISEASE,
     NANDO_MANUAL_PATH,
     RDF_DIR,
     merge_associations_from_tsv,
@@ -36,16 +39,19 @@ def main() -> None:
     print(f"NANDO_NCBIGene Overlap : {nanbyou_stats.overlap}")
 
     source_uri_map = {
-        "PanelSearch": "https://jshg.jp/wp-content/uploads/2024/03/a02edeee573e7797da6a821a5bc48026.pdf",
-        "Nanbyou": "https://www.nanbyou.or.jp/",
+        "PanelSearch": URIRef(
+            "https://jshg.jp/wp-content/uploads/2024/03/a02edeee573e7797da6a821a5bc48026.pdf"
+        ),
+        "Nanbyou": URIRef("https://www.nanbyou.or.jp/"),
     }
     write_gene_association_ttl(
-        Path(RDF_DIR) / "NANDO_Gene_Association.ttl",
-        nando_ncbi_gene_map,
-        "NANDO",
-        "nando:",
-        "PREFIX nando: <http://nanbyodata.jp/ontology/NANDO_>",
-        source_uri_map,
+        output_path=Path(RDF_DIR) / "NANDO_Gene_Association.ttl",
+        associations=nando_ncbi_gene_map,
+        disease_context_prefix="NANDO",
+        disease_namespace_prefix="nando",
+        disease_namespace=NANDO_DISEASE,
+        disease_id_prefix="",
+        source_uri_map=source_uri_map,
     )
 
 

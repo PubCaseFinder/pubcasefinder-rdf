@@ -13,7 +13,6 @@ import duckdb
 from package.rdf_build_support import (
     load_config,
     open_text_reader,
-    open_text_writer,
     resolve_configured_file,
     resolve_configured_output_dir,
     resolve_resource_root,
@@ -26,6 +25,7 @@ GENCC = Namespace("https://search.thegencc.org/submissions/")
 GENE_CONTEXT = Namespace("https://pubcasefinder.dbcls.jp/gene_context/")
 MIM = Namespace("https://omim.org/entry/")
 NANDO = Namespace("http://nanbyodata.jp/ontology/nando#")
+NANDO_DISEASE = Namespace("http://nanbyodata.jp/ontology/NANDO_")
 NCBIGENE = Namespace("http://identifiers.org/ncbigene/")
 OBO = Namespace("http://purl.obolibrary.org/obo/")
 ORDO = Namespace("http://www.orpha.net/ORDO/")
@@ -526,39 +526,45 @@ def add_association(
     sources.append(source)
     return True
 
-
 def write_gene_association_ttl(
     output_path: str | Path,
     associations: AssociationMap,
-    disease_namespace_in_path: str,
-    disease_resource_prefix: str,
-    disease_prefix_line: str,
-    source_uri_map: dict[str, str],
+    *,
+    disease_context_prefix: str,
+    disease_namespace_prefix: str,
+    disease_namespace: Namespace,
+    disease_id_prefix: str,
+    source_uri_map: dict[str, URIRef],
 ) -> None:
-    with open_text_writer(output_path) as writer:
-        writer.write("PREFIX dcterms: <http://purl.org/dc/terms/>\n")
-        writer.write("PREFIX ncbigene: <http://identifiers.org/ncbigene/>\n")
-        writer.write(f"{disease_prefix_line}\n")
-        writer.write("PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n")
-        writer.write("PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n")
-        writer.write("PREFIX sio: <http://semanticscience.org/resource/>\n")
+    graph = Graph()
+    graph.bind("dcterms", DCTERMS)
+    graph.bind("ncbigene", NCBIGENE)
+    graph.bind(disease_namespace_prefix, disease_namespace)
+    graph.bind("rdf", RDF)
+    graph.bind("rdfs", RDFS)
+    graph.bind("sio", SIO)
 
-        for key, sources in associations.items():
-            disease_id, ncbi_id = key.split("\t")
-            writer.write(
-                "<https://pubcasefinder.dbcls.jp/gene_context/"
-                f"disease:{disease_namespace_in_path}:{disease_id}/gene:ENT:{ncbi_id}>\n"
-            )
-            writer.write("    a sio:SIO_000983 ;\n")
-            writer.write(
-                f"    sio:SIO_000628 {disease_resource_prefix}{disease_id}, ncbigene:{ncbi_id} ;\n"
-            )
-            writer.write("    dcterms:source ")
+    for key, sources in associations.items():
+        disease_id, ncbi_id = key.split("\t")
+        association_uri = GENE_CONTEXT[
+            f"disease:{disease_context_prefix}:{disease_id}/gene:ENT:{ncbi_id}"
+        ]
+        disease_uri = disease_namespace[f"{disease_id_prefix}{disease_id}"]
+        gene_uri = NCBIGENE[ncbi_id]
 
-            source_uris = [source_uri_map[source] for source in sources if source in source_uri_map]
-            writer.write(", ".join(f"<{source_uri}>" for source_uri in source_uris))
-            writer.write(" .\n")
+        graph.add((association_uri, RDF.type, SIO["SIO_000983"]))
+        graph.add((association_uri, SIO["SIO_000628"], disease_uri))
+        graph.add((association_uri, SIO["SIO_000628"], gene_uri))
 
+        # source_mapにない値がソースに入っている場合、https://pubcasefinder.dbcls.jp/gene_context/disease:obo:0001/gene:ENT:1 のようなのがソースとして入る
+        for source in sources:
+            source_uri = source_uri_map.get(source)
+            if source_uri is not None:
+                graph.add((association_uri, DCTERMS.source, source_uri))
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    graph.serialize(destination=str(output_path), format="turtle", encoding="utf-8")
 
 def write_gencc_gene_association_ttl(
     output_path: str | Path,

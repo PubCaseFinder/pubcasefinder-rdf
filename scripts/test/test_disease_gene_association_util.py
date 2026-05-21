@@ -1,5 +1,5 @@
 from pathlib import Path
-from rdflib import Graph, RDF, DCTERMS, Literal
+from rdflib import Graph, RDF, DCTERMS, Literal, URIRef
 
 from package import disease_gene_association_util
 
@@ -482,6 +482,54 @@ def test_build_mondo_gene_associations(mocker, tmp_path):
     })
     assert mondo_ncbi_gene_map == expect_mondo_ncbi_gene_map
 
+def test_write_gene_association_ttl(tmp_path):
+    output_path = tmp_path / 'MONDO_Gene_Association.ttl'
+    associations = disease_gene_association_util.AssociationMap({
+        '0008426\t6497': ['MedGen', 'Orphanet'],
+    })
+    source_uri_map = {
+        'MedGen': URIRef('ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/mim2gene_medgen'),
+        'Orphanet': URIRef('http://www.orphadata.org/data/xml/en_product6.xml'),
+    }
+
+    disease_gene_association_util.write_gene_association_ttl(
+        output_path=output_path,
+        associations=associations,
+        disease_context_prefix='MONDO',
+        disease_namespace_prefix='obo',
+        disease_namespace=disease_gene_association_util.OBO,
+        disease_id_prefix='MONDO_',
+        source_uri_map=source_uri_map,
+    )
+
+    graph = Graph()
+    graph.parse(output_path, format='turtle')
+
+    association_uri = disease_gene_association_util.GENE_CONTEXT[
+        'disease:MONDO:0008426/gene:ENT:6497'
+    ]
+    assert (association_uri, RDF.type, disease_gene_association_util.SIO['SIO_000983']) in graph
+    assert (
+        association_uri,
+        disease_gene_association_util.SIO['SIO_000628'],
+        disease_gene_association_util.OBO['MONDO_0008426'],
+    ) in graph
+    assert (
+        association_uri,
+        disease_gene_association_util.SIO['SIO_000628'],
+        disease_gene_association_util.NCBIGENE['6497'],
+    ) in graph
+    assert (
+        association_uri,
+        DCTERMS.source,
+        URIRef('ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/mim2gene_medgen'),
+    ) in graph
+    assert (
+        association_uri,
+        DCTERMS.source,
+        URIRef('http://www.orphadata.org/data/xml/en_product6.xml'),
+    ) in graph
+
 def test_write_gencc_gene_association_ttl(tmp_path):
     output_path = Path(tmp_path)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -584,5 +632,3 @@ def test_extract_orphanet_id():
     mock_uri = '<skos:exactMatch rdf:resource="http://www.orpha.net/ORDO/Orphanet_377788"/>'
     result = disease_gene_association_util.extract_orphanet_id(mock_uri)
     assert result == '377788'
-
-

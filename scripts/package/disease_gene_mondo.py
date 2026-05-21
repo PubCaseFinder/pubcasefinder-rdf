@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pathlib import Path
+from rdflib import URIRef
 
 from utils.log_util import get_logger
 from rdf_build_support import (
@@ -8,6 +8,7 @@ from rdf_build_support import (
 )
 from scripts.package.disease_gene_association_util import (
     GENCC_SOURCE_URI,
+    OBO,
     build_mondo_gene_associations,
     write_gene_association_ttl,
 )
@@ -20,17 +21,18 @@ def main() -> None:
     print(f"MONDO_Gene_Association Count : {len(mondo_ncbi_gene_map)}")
 
     source_uri_map = {
-        "MedGen": "ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/mim2gene_medgen",
-        "Orphanet": "http://www.orphadata.org/data/xml/en_product6.xml",
-        "GenCC": GENCC_SOURCE_URI,
+        "MedGen": URIRef("ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/mim2gene_medgen"),
+        "Orphanet": URIRef("http://www.orphadata.org/data/xml/en_product6.xml"),
+        "GenCC": URIRef(GENCC_SOURCE_URI),
     }
     write_gene_association_ttl(
-        config['rdf_output_dir'] / "MONDO_Gene_Association.ttl",
-        mondo_ncbi_gene_map,
-        "MONDO",
-        "obo:MONDO_",
-        "PREFIX obo: <http://purl.obolibrary.org/obo/>",
-        source_uri_map,
+        output_path=config['rdf_output_dir'] / "MONDO_Gene_Association.ttl",
+        associations=mondo_ncbi_gene_map,
+        disease_context_prefix="MONDO",
+        disease_namespace_prefix="obo",
+        disease_namespace=OBO,
+        disease_id_prefix="MONDO_",
+        source_uri_map=source_uri_map,
     )
 
 
