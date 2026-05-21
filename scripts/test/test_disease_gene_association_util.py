@@ -427,6 +427,18 @@ def test_merge_association_maps():
     })
     assert mock_target_map == expect_result_map
 
+def test_check_file_char_code(tmp_path):
+    character_codes = {
+        'cp949': (tmp_path / 'cp949_file_utf8.txt').as_posix(),
+        'utf-8': (tmp_path / 'utf-8_file.txt').as_posix(),
+        'cp932': None,
+    }
+    for code, expect_result in character_codes.items():
+        path = f'{tmp_path}/{code}_file.txt'
+        Path(path).write_text('今日の芸術', encoding=code)
+        result = disease_gene_association_util.check_file_char_code(path)
+        assert result == expect_result
+
 def test_build_mondo_gene_associations(mocker, tmp_path):
 
     # | ncbi  | mondo  | omim   | ordo | source          |

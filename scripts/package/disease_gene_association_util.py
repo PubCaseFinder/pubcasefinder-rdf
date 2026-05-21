@@ -446,7 +446,7 @@ def merge_associations_from_tsv(
     skip_first_line: bool = False,
 ) -> MergeStats:
     stats = MergeStats()
-    path = check_file(path)
+    path = check_file_char_code(path)
     if path:
         sys.exit(1)
 
@@ -482,7 +482,7 @@ def merge_associations_from_tsv(
 # utf-8でファイルを開こうとする
 # もし開けない場合はcp949でファイルを開き、そのファイルの横にutf-8エンコードしたファイルを吐き出させる
 # それでも開けない場合はerrorを返して処理を中断
-def check_file(path: str | Path) -> str | Path:
+def check_file_char_code(path: str | Path) -> str | Path:
     char_code = ''
     if Path(path).suffix == '.gz':
         with gzip.open(path, 'rb') as f:
