@@ -154,7 +154,6 @@ def load_ncbi_gene_symbol_map(path: str | Path) -> dict[str, str]:
             ncbi_gene_symbol_map[row[1]] = row[0]
     return ncbi_gene_symbol_map
 
-
 # ncbiのHomo_sapience.gene_infoからhgncid: dxrefをマッピング
 def load_hgnc_to_ncbi_map(path: str | Path) -> dict[str, str]:
     hgnc_to_ncbi_map: dict[str, str] = {}
@@ -253,7 +252,6 @@ def load_orphanet_gene_associations(
 
     return associations
 
-
 def load_omim_gene_associations(path: str | Path) -> AssociationMap:
     associations: AssociationMap = {}
     con = duckdb.connect()
@@ -275,7 +273,6 @@ def load_omim_gene_associations(path: str | Path) -> AssociationMap:
         add_association(associations, row[0], row[1], "MedGen")
 
     return associations
-
 
 def load_gencc_definitive_associations(
     ncbigene_gene_info_path: str,
@@ -357,7 +354,6 @@ def load_gencc_associations(
 
     return associations
 
-
 def add_original_disease_association(
     associations: GenCCAssociations,
     ncbi_id: str,
@@ -425,11 +421,12 @@ def project_gene_to_mapped_diseases(
     for mapped_id in mapped_ids:
         add_association(target_associations, mapped_id, ncbi_id, source)
 
-
 def merge_association_maps(target: AssociationMap, source: AssociationMap) -> None:
     for key, source_names in source.items():
+        print('key: ', key)
         disease_id, gene_id = key.split("\t")
         for source_name in source_names:
+            print('source: ', source_name)
             add_association(target, disease_id, gene_id, source_name)
 
 
@@ -469,7 +466,7 @@ def read_tsv_lines(path: str | Path) -> list[str]:
             with Path(path).open("rt", encoding="utf-8", errors="replace") as reader:
                 return list(reader)
 
-
+# result -> mondo id\tncbi gene id: source list
 def add_projected_mondo_associations(
     mondo_associations: AssociationMap,
     source_associations: AssociationMap,
@@ -485,7 +482,6 @@ def add_projected_mondo_associations(
             for source in sources:
                 add_association(mondo_associations, mondo_id, ncbi_id, source)
 
-
 def build_mondo_gene_associations(
     ncbigene_gene_info_path: str,
     mondo_owl_path: str,
@@ -500,7 +496,6 @@ def build_mondo_gene_associations(
     )
     mondo_mapping = load_mondo_mapping_from_owl(mondo_owl_path)
     omim_ncbi_gene_map = load_omim_gene_associations(medgen_mim2gene_path)
-    # TODO:
     orphanet_ncbi_gene_map = load_orphanet_gene_associations(ncbigene_gene_info_path, orphanet_product6_path)
 
     mondo_ncbi_gene_map: AssociationMap = {}
@@ -517,7 +512,7 @@ def build_mondo_gene_associations(
     merge_association_maps(mondo_ncbi_gene_map, gencc_associations.mondo_associations)
     return mondo_ncbi_gene_map
 
-
+# 第一引数で受け取ったmapにdisease_id\tgene_id: [sources]を入れる関数
 def add_association(
     associations: AssociationMap,
     disease_id: str,

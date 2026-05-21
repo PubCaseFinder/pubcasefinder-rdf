@@ -289,7 +289,6 @@ def test_load_gencc_associations(mocker, tmp_path):
         project_mondo_to_mapped_diseases=True
     )
 
-    print(associations)
     assert associations.omim_associations == {
         '182212\t1': ['GenCC'],
     }
@@ -379,6 +378,109 @@ def test_load_mondo_mapping_from_owl(tmp_path):
     assert mapping.orpha_to_mondo == {
         '2462': ['0008426'],
     }
+
+def test_add_projected_mondo_associations(tmp_path):
+    mondo_ncbi_gene_map: disease_gene_association_util.AssociationMap = {}
+        # omim_to_mondo = {
+        #     '182212': ['0008426'],
+        #     '171300': ['0008233'],
+        # },
+    omim_ncbi_gene_map = {
+        '182212\t1': ['MedGen'],
+        '171300\t2': ['MedGen'],
+    }
+    mondo_mappping = mock_load_mondo_mapping_from_owl(tmp_path)
+    disease_gene_association_util.add_projected_mondo_associations(
+        mondo_ncbi_gene_map,
+        omim_ncbi_gene_map,
+        mondo_mappping.omim_to_mondo,
+    )
+
+    expect_mondo_ncbi_gene_map = {
+        '0008426\t1': ['MedGen'],
+        '0008233\t2': ['MedGen']
+    }
+
+    assert mondo_ncbi_gene_map == expect_mondo_ncbi_gene_map
+
+def test_merge_association_maps():
+    mock_source_map = disease_gene_association_util.AssociationMap({
+        '0008426\t1': ['GenCC'],
+    })
+    mock_target_map = disease_gene_association_util.AssociationMap({
+        '0008426\t6497': ['MedGen', 'Orphanet'],
+        '0008233\t23095': ['MedGen'],
+        '0008233\t4149': ['MedGen'],
+        '0008233\t55654': ['MedGen'],
+        '0008233\t5979': ['MedGen'],
+        '0008233\t7428': ['MedGen'],
+    })
+    disease_gene_association_util.merge_association_maps(mock_target_map, mock_source_map)
+    expect_result_map = disease_gene_association_util.AssociationMap({
+        '0008426\t1': ['GenCC'],
+        '0008426\t6497': ['MedGen', 'Orphanet'],
+        '0008233\t23095': ['MedGen'],
+        '0008233\t4149': ['MedGen'],
+        '0008233\t55654': ['MedGen'],
+        '0008233\t5979': ['MedGen'],
+        '0008233\t7428': ['MedGen'],
+    })
+    assert mock_target_map == expect_result_map
+
+def test_build_mondo_gene_associations(mocker, tmp_path):
+
+    # | ncbi  | mondo  | omim   | ordo | source          |
+    # | ----- | ------ | ------ | ---- | --------------- |
+    # | 1     | 008426 | 182212 | 2462 | GenCC,          |
+    # |       | 008233 | 171300 |      | (mapping)       |
+    # | 6497  |        | 182212 | 2462 | MedGen,Orphanet |
+    # | 23095 |        | 171300 |      | MedGen,         |
+    # | 4149  |        | 171300 |      | MedGen,         |
+    # | 55654 |        | 171300 |      | MedGen,         |
+    # | 5979  |        | 171300 |      | MedGen,         |
+    # | 7428  |        | 171300 |      | MedGen,         |
+
+    def mock_load_gencc_definitive_associations(_path, _path_1, _path_2):
+        return disease_gene_association_util.GenCCAssociations(
+            omim_associations = {'182212\t1': ['GenCC']},
+            orphanet_associations = {'2462\t1': ['GenCC']},
+            mondo_associations = {'0008426\t1': ['GenCC']}
+        )
+    def mock_load_omim_gene_associations(_path):
+        return disease_gene_association_util.AssociationMap({
+            '182212\t6497': ['MedGen'],
+            '171300\t23095': ['MedGen'],
+            '171300\t4149': ['MedGen'],
+            '171300\t55654': ['MedGen'],
+            '171300\t5979': ['MedGen'],
+            '171300\t7428': ['MedGen'],
+        })
+    def mock_load_orphanet_gene_associations(_path, _path_1):
+        return disease_gene_association_util.AssociationMap({
+            '2462\t6497': ['Orphanet']
+        })
+    mocker.patch.object(disease_gene_association_util, 'load_gencc_definitive_associations', mock_load_gencc_definitive_associations)
+    mocker.patch.object(disease_gene_association_util, 'load_mondo_mapping_from_owl', mock_load_mondo_mapping_from_owl)
+    mocker.patch.object(disease_gene_association_util, 'load_omim_gene_associations', mock_load_omim_gene_associations)
+    mocker.patch.object(disease_gene_association_util, 'load_orphanet_gene_associations', mock_load_orphanet_gene_associations)
+
+    mondo_ncbi_gene_map = disease_gene_association_util.build_mondo_gene_associations(
+        tmp_path,
+        tmp_path,
+        tmp_path,
+        tmp_path,
+        tmp_path
+    )
+    expect_mondo_ncbi_gene_map = disease_gene_association_util.AssociationMap({
+        '0008426\t1': ['GenCC'],
+        '0008426\t6497': ['MedGen', 'Orphanet'],
+        '0008233\t23095': ['MedGen'],
+        '0008233\t4149': ['MedGen'],
+        '0008233\t55654': ['MedGen'],
+        '0008233\t5979': ['MedGen'],
+        '0008233\t7428': ['MedGen'],
+    })
+    assert mondo_ncbi_gene_map == expect_mondo_ncbi_gene_map
 
 def test_write_gencc_gene_association_ttl(tmp_path):
     output_path = Path(tmp_path)
