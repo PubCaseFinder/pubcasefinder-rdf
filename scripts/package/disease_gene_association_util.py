@@ -5,11 +5,15 @@ import re
 from pathlib import Path
 import csv
 import xml.etree.ElementTree as ET
+import sys
+import gzip
 
 from rdflib import Graph, Literal, Namespace, URIRef
 from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS
 import duckdb
+import chardet
 
+from utils.log_util import get_logger
 from package.rdf_build_support import (
     load_config,
     open_text_reader,
@@ -17,6 +21,8 @@ from package.rdf_build_support import (
     resolve_configured_output_dir,
     resolve_resource_root,
 )
+
+logger = get_logger()
 
 
 GENCC_SOURCE_URI = "https://search.thegencc.org/download/action/submissions-export-csv"
@@ -433,40 +439,81 @@ def merge_association_maps(target: AssociationMap, source: AssociationMap) -> No
 def merge_associations_from_tsv(
     path: str | Path,
     associations: AssociationMap,
-    disease_index: int,
-    gene_index: int,
+    disease_column: int,
+    gene_column: int,
     source: str,
     *,
     skip_first_line: bool = False,
 ) -> MergeStats:
     stats = MergeStats()
-    for line_number, line in enumerate(read_tsv_lines(path), start=1):
-        if skip_first_line and line_number == 1:
-            continue
+    path = check_file(path)
+    if path:
+        sys.exit(1)
 
-        split = line.rstrip("\n").split("\t")
-        if len(split) > max(disease_index, gene_index):
-            if add_association(associations, split[disease_index], split[gene_index], source):
-                stats.added += 1
-            else:
-                stats.overlap += 1
-
+    con = duckdb.connect()
+    query_statement = f"""
+        select
+            {disease_column},
+            {gene_column}
+        from
+            read_csv({path}, delim='\\t')
+        """
+    res = con.execute(query_statement)
+    for row in res:
+        if add_association(associations, row[0], row[1], source):
+            stats.added += 1
+        else:
+            stats.overlap += 1
     return stats
 
+    # for line_number, line in enumerate(check_file(path), start=1):
+    #     if skip_first_line and line_number == 1:
+    #         continue
 
-def read_tsv_lines(path: str | Path) -> list[str]:
-    try:
-        with open_text_reader(path) as reader:
-            return list(reader)
-    except UnicodeDecodeError:
-        try:
-            with Path(path).open("rt", encoding="cp932") as reader:
-                return list(reader)
-        except UnicodeDecodeError:
-            with Path(path).open("rt", encoding="utf-8", errors="replace") as reader:
-                return list(reader)
+    #     split = line.rstrip("\n").split("\t")
+    #     if len(split) > max(disease_index, gene_index):
+    #         if add_association(associations, split[disease_index], split[gene_index], source):
+    #             stats.added += 1
+    #         else:
+    #             stats.overlap += 1
 
-# result -> mondo id\tncbi gene id: source list
+    # return stats
+
+# utf-8でファイルを開こうとする
+# もし開けない場合はcp949でファイルを開き、そのファイルの横にutf-8エンコードしたファイルを吐き出させる
+# それでも開けない場合はerrorを返して処理を中断
+def check_file(path: str | Path) -> str | Path:
+    char_code = ''
+    if Path(path).suffix == '.gz':
+        with gzip.open(path, 'rb') as f:
+            char_code = chardet.detect(f.readline(), include_encodings=['utf-8','cp949'])
+        print('文字列コード:', char_code['encoding'])
+        return create_utf8_file(path, char_code['encoding'])
+    else:
+        with open(path, 'rb') as f:
+            char_code = chardet.detect(f.readline(), include_encodings=['utf-8','cp949'])
+        print('文字列コード:', char_code['encoding'])
+        return create_utf8_file(path, char_code['encoding'])
+
+def create_utf8_file(path: str | Path, char_code: str):
+    match char_code:
+        case 'utf-8':
+            return path
+        case 'CP949':
+            if Path(path).suffix == '.gz':
+                reader = gzip.open(path, 'rt', encoding='cp949')
+            else:
+                reader = open(path, 'r', encoding='cp949')
+
+            base_path = Path(path)
+            utf8_file_path = f'{base_path.parent}/{base_path.stem}_utf8{base_path.suffix}'
+            with open(utf8_file_path, 'w', encoding='utf-8') as writer:
+                writer.write(reader.read())
+            reader.close()
+            return utf8_file_path
+        case None:
+            return None
+
 def add_projected_mondo_associations(
     mondo_associations: AssociationMap,
     source_associations: AssociationMap,

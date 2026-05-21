@@ -4,21 +4,24 @@ from pathlib import Path
 
 from rdflib import URIRef
 
+from utils.log_util import get_logger
+from rdf_build_support import (
+    load_config
+)
 from scripts.package.disease_gene_association_util import (
-    NANDO_ASSOCIATION_PATH,
     NANDO_DISEASE,
-    NANDO_MANUAL_PATH,
-    RDF_DIR,
     merge_associations_from_tsv,
     write_gene_association_ttl,
 )
 
+logger = get_logger()
 
 def main() -> None:
+    config = load_config('config.ini')
     nando_ncbi_gene_map: dict[str, list[str]] = {}
 
     panel_search_stats = merge_associations_from_tsv(
-        NANDO_ASSOCIATION_PATH,
+        config['panelsearch_association_path'],
         nando_ncbi_gene_map,
         1,
         3,
@@ -28,7 +31,7 @@ def main() -> None:
     print(f"NANDO_NCBIGene PanelSearch Count : {panel_search_stats.added}")
 
     nanbyou_stats = merge_associations_from_tsv(
-        NANDO_MANUAL_PATH,
+        config['panelsearch_manual_path'],
         nando_ncbi_gene_map,
         4,
         7,
@@ -45,7 +48,7 @@ def main() -> None:
         "Nanbyou": URIRef("https://www.nanbyou.or.jp/"),
     }
     write_gene_association_ttl(
-        output_path=Path(RDF_DIR) / "NANDO_Gene_Association.ttl",
+        output_path=Path(config['rdf_output_dir']) / "NANDO_Gene_Association.ttl",
         associations=nando_ncbi_gene_map,
         disease_context_prefix="NANDO",
         disease_namespace_prefix="nando",
