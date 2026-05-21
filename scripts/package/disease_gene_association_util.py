@@ -442,12 +442,10 @@ def merge_associations_from_tsv(
     disease_column: int,
     gene_column: int,
     source: str,
-    *,
-    skip_first_line: bool = False,
-) -> MergeStats:
+    ) -> MergeStats:
     stats = MergeStats()
     path = check_file_char_code(path)
-    if path:
+    if not path:
         sys.exit(1)
 
     con = duckdb.connect()
@@ -456,11 +454,15 @@ def merge_associations_from_tsv(
             {disease_column},
             {gene_column}
         from
-            read_csv({path}, delim='\\t')
+            read_csv('{path}', delim='\\t')
         """
     res = con.execute(query_statement)
-    for row in res:
-        if add_association(associations, row[0], row[1], source):
+    while True:
+        row = res.fetchone()
+        if row is None:
+            break
+
+        if add_association(associations, str(row[0]), str(row[1]), source):
             stats.added += 1
         else:
             stats.overlap += 1
@@ -512,6 +514,7 @@ def create_utf8_file(path: str | Path, char_code: str):
             reader.close()
             return utf8_file_path
         case None:
+            logger.error(f'check the file character code: {path}')
             return None
 
 def add_projected_mondo_associations(

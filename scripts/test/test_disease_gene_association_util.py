@@ -427,6 +427,43 @@ def test_merge_association_maps():
     })
     assert mock_target_map == expect_result_map
 
+def test_merge_associations_from_tsv(mocker, tmp_path):
+    path = (tmp_path / 'nando.tsv').as_posix()
+    associations = disease_gene_association_util.AssociationMap()
+    def mock_check_file_char_code(_path):
+        content = """
+Label	NANDO	Symbol	GeneID
+先天性筋無力症候群	1200021	RAPSN	5913
+先天性筋無力症候群	1200021	SCN4A	6329
+?取り空胞を伴う遠位型ミオパチ?	1200218	GNE	10020
+ベスレムミオパチ?	1200220	COL6A1	1291
+過?自己貪食を伴うＸ連鎖性ミオパチ?	1200223	VMA21	203547
+先天性ミオパチ?	1200477	ACTA1	58
+"""
+        create_mock_file(path, content)
+        return path
+
+    mocker.patch.object(disease_gene_association_util, 'check_file_char_code', mock_check_file_char_code)
+    stats = disease_gene_association_util.merge_associations_from_tsv(
+        path,
+        associations,
+        'NANDO',
+        'GeneID',
+        'PanelSearch'
+    )
+    expect_associations = disease_gene_association_util.AssociationMap({
+        '1200021\t5913': ['PanelSearch'],
+        '1200021\t6329': ['PanelSearch'],
+        '1200218\t10020': ['PanelSearch'],
+        '1200220\t1291': ['PanelSearch'],
+        '1200223\t203547': ['PanelSearch'],
+        '1200477\t58': ['PanelSearch'],
+    })
+    assert stats.added == 6
+    assert stats.overlap == 0
+    assert associations == expect_associations
+
+
 def test_check_file_char_code(tmp_path):
     character_codes = {
         'cp949': (tmp_path / 'cp949_file_utf8.txt').as_posix(),
@@ -438,6 +475,9 @@ def test_check_file_char_code(tmp_path):
         Path(path).write_text('今日の芸術', encoding=code)
         result = disease_gene_association_util.check_file_char_code(path)
         assert result == expect_result
+        if result is not None:
+            with open(result) as f:
+                assert f.readline() == '今日の芸術'
 
 def test_build_mondo_gene_associations(mocker, tmp_path):
 
