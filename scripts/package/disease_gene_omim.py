@@ -1,99 +1,52 @@
-from dataclasses import dataclass, field
+from __future__ import annotations
+
 from pathlib import Path
-import configparser
-import csv
-import re
 
-from rdflib import Graph, Namespace, URIRef
-from rdflib.namespace import OWL, RDF, SKOS
+from rdflib import URIRef
 
-from uils.get_data import GetDataConfig, get_data
+from utils.log_util import get_logger
+from package.rdf_build_support import load_config
+from package.disease_gene_association_util import (
+    GENCC_SOURCE_URI,
+    MIM,
+    load_gencc_definitive_associations,
+    load_omim_gene_associations,
+    merge_association_maps,
+    write_gene_association_ttl,
+)
 
-
-@dataclass
-class OMIMGetDataConfig(GetDataConfig):
-    output_dir: str = field(default_factory='data/OMIM')
-
-SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent
-
-MONDO = Namespace("http://purl.obolibrary.org/obo/MONDO_")
-OMIM_URI_PATTERN = re.compile(r"(?:/omim/|omim\.org/entry/)(\d+)")
+logger = get_logger()
 
 
-def mondo_id(mondo_uri: URIRef) -> str | None:
-    uri = str(mondo_uri)
-    prefix = str(MONDO)
-    if not uri.startswith(prefix):
-        return None
+def main() -> None:
+    config = load_config("config.ini")
 
-    value = uri.removeprefix(prefix)
-    return value if value.isdigit() else None
+    omim_ncbi_gene_map = load_omim_gene_associations(config["medgen_mim2gene_path"])
+    print(f"OMIM_NCBIGene All Count : {len(omim_ncbi_gene_map)}")
 
+    gencc_associations = load_gencc_definitive_associations(
+        config["ncbigene_file_path"],
+        config["mondo_owl_path"],
+        config["gencc_submissions_path"],
+    )
+    before_merge = len(omim_ncbi_gene_map)
+    merge_association_maps(omim_ncbi_gene_map, gencc_associations.omim_associations)
+    print(f"GenCC_ncbigene_omim Count : {len(omim_ncbi_gene_map) - before_merge}")
 
-def omim_id(omim_uri: URIRef) -> str | None:
-    match = OMIM_URI_PATTERN.search(str(omim_uri))
-    return match.group(1) if match else None
+    source_uri_map = {
+        "MedGen": URIRef("ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/mim2gene_medgen"),
+        "GenCC": URIRef(GENCC_SOURCE_URI),
+    }
+    write_gene_association_ttl(
+        output_path=Path(config["rdf_output_dir"]) / "OMIM_Gene_Association.ttl",
+        associations=omim_ncbi_gene_map,
+        disease_context_prefix="OMIM",
+        disease_namespace_prefix="mim",
+        disease_namespace=MIM,
+        disease_id_prefix="",
+        source_uri_map=source_uri_map,
+    )
 
-
-# mondo_uriに対してomim_uriが非推奨の場合は省く
-def is_deprecated(graph: Graph, mondo_uri: URIRef) -> bool:
-    return any(str(value).lower() == "true" for value in graph.objects(mondo_uri, OWL.deprecated))
-
-
-def build_mondo_omim_rows(mondo_owl_path: Path) -> list[dict[str, str]]:
-    graph = Graph()
-    graph.parse(mondo_owl_path, format="xml")
-
-    rows = set()
-    for mondo_uri, _, omim_uri in graph.triples((None, SKOS.exactMatch, None)):
-        if not isinstance(mondo_uri, URIRef) or not isinstance(omim_uri, URIRef):
-            continue
-
-        # くどいかも
-        if (mondo_uri, RDF.type, OWL.Class) not in graph:
-            continue
-
-        if is_deprecated(graph, mondo_uri):
-            continue
-
-        mondo = mondo_id(mondo_uri)
-        omim = omim_id(omim_uri)
-        if mondo is None or omim is None:
-            continue
-
-        rows.add(
-            (
-                mondo,
-                omim,
-            )
-        )
-
-    return rows
-
-
-def write_mondo_omim_mapping_csv(config: configparser.ConfigParser) -> int:
-    rows = build_mondo_omim_rows(config.data_path)
-    fieldnames = ["mondo_id", "omim_id"]
-
-    with open(config.data_path, 'w') as w:
-        writer = csv.DictWriter(w, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
-
-    return
 
 if __name__ == "__main__":
-    config_ini = configparser.ConfigParser()
-
-    # mim2geneの取得
-    config_ini.read('config.ini', encoding='utf-8')
-    disease_gene_omim_helper_config = OMIMGetDataConfig(
-        config_ini.get('DEFAULT', 'omim_mim2gene_path'),
-        config_ini.get('DEFAULT', 'omim_mim2gene_data_uri'),
-        config_ini.get('DEFAULT', 'omim_dir')
-    )
-    get_data(disease_gene_omim_helper_config)
-
-    # mondo:omimのマップを作成
-    write_mondo_omim_mapping_csv(disease_gene_omim_helper_config)
+    main()
