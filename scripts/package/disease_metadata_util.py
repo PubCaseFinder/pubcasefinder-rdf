@@ -4,7 +4,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import re
 
-from scripts.package.rdf_build_support import (
+import duckdb
+
+from package.rdf_build_support import (
     load_config,
     open_text_reader,
     open_text_writer,
@@ -14,41 +16,41 @@ from scripts.package.rdf_build_support import (
 )
 
 
-CONFIG = load_config()
+# CONFIG = load_config()
 
-OMIM_MIM2GENE_PATH = resolve_configured_file(
-    CONFIG,
-    "omim.mim2gene.path",
-    resolve_resource_root(CONFIG, "omim.dir"),
-    "mim2gene.txt",
-)
-MEDGEN_OMIM_HPO_PATH = resolve_configured_file(
-    CONFIG,
-    "medgen.omim.hpo.path",
-    resolve_resource_root(CONFIG, "medgen.dir"),
-    "MedGen_HPO_OMIM_Mapping.txt.gz",
-    alternate_file_names=("MedGen_HPO_OMIM_Mapping.txt",),
-)
-MONDO_OWL_PATH = resolve_configured_file(
-    CONFIG,
-    "mondo.owl.path",
-    resolve_resource_root(CONFIG, "mondo.dir"),
-    "mondo-international.owl",
-    alternate_file_names=("mondo.owl", "mondo.obo"),
-)
-KEGG_DISEASE_PATH = resolve_configured_file(
-    CONFIG,
-    "kegg.disease.path",
-    resolve_resource_root(CONFIG, "kegg.dir"),
-    "KEGG_disease.tsv",
-)
-GENE_REVIEWS_PATH = resolve_configured_file(
-    CONFIG,
-    "genereviews.omim.path",
-    resolve_resource_root(CONFIG, "genereviews.dir"),
-    "NBKid_shortname_OMIM.txt",
-)
-RDF_DIR = resolve_configured_output_dir(CONFIG)
+# OMIM_MIM2GENE_PATH = resolve_configured_file(
+#     CONFIG,
+#     "omim.mim2gene.path",
+#     resolve_resource_root(CONFIG, "omim.dir"),
+#     "mim2gene.txt",
+# )
+# MEDGEN_OMIM_HPO_PATH = resolve_configured_file(
+#     CONFIG,
+#     "medgen.omim.hpo.path",
+#     resolve_resource_root(CONFIG, "medgen.dir"),
+#     "MedGen_HPO_OMIM_Mapping.txt.gz",
+#     alternate_file_names=("MedGen_HPO_OMIM_Mapping.txt",),
+# )
+# MONDO_OWL_PATH = resolve_configured_file(
+#     CONFIG,
+#     "mondo.owl.path",
+#     resolve_resource_root(CONFIG, "mondo.dir"),
+#     "mondo-international.owl",
+#     alternate_file_names=("mondo.owl", "mondo.obo"),
+# )
+# KEGG_DISEASE_PATH = resolve_configured_file(
+#     CONFIG,
+#     "kegg.disease.path",
+#     resolve_resource_root(CONFIG, "kegg.dir"),
+#     "KEGG_disease.tsv",
+# )
+# GENE_REVIEWS_PATH = resolve_configured_file(
+#     CONFIG,
+#     "genereviews.omim.path",
+#     resolve_resource_root(CONFIG, "genereviews.dir"),
+#     "NBKid_shortname_OMIM.txt",
+# )
+# RDF_DIR = resolve_configured_output_dir(CONFIG)
 
 
 @dataclass
@@ -85,20 +87,29 @@ def add_value(mapping: dict[str, list[str]], key: str, value: str) -> None:
 def load_omim_disease_ids(path: str | Path) -> list[str]:
     omim_ids: list[str] = []
     seen: set[str] = set()
-    with open_text_reader(path) as reader:
-        for _ in range(4):
-            reader.readline()
 
-        for line in reader:
-            split = line.rstrip("\n").split("\t")
-            if len(split) <= 1:
-                continue
-            mim_type = split[1]
-            if mim_type in {" ", "phenotype", "predominantly phenotypes"} and split[0] not in seen:
-                seen.add(split[0])
-                omim_ids.append(split[0])
+    con = duckdb.connect()
+    query_statement = f"""
+        select
+            "# MIM Number"
+        from
+            read_csv('{path}', delim='\t')
+        where
+            "MIM Entry Type (see FAQ 1.3 at https://omim.org/help/faq)" in  (' ', 'phenotype', 'predominantly phenotypes')
+        """
+    res = con.execute(query_statement)
+
+    i = 0
+    while True:
+        row = res.fetchone()
+        if row is None:
+            break
+        row = str(row[0])
+        if row not in seen:
+            seen.add(row)
+            omim_ids.append(row)
+    
     return omim_ids
-
 
 def load_omim_inheritance_map(path: str | Path) -> dict[str, list[str]]:
     inheritance_map: dict[str, list[str]] = {}
