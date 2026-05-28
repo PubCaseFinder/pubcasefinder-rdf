@@ -5,10 +5,10 @@ from pathlib import Path
 from rdflib import URIRef
 
 from utils.log_util import get_logger
-from rdf_build_support import (
+from package.rdf_build_support import (
     load_config
 )
-from scripts.package.disease_gene_association_util import (
+from package.disease_gene_association_util import (
     NANDO_DISEASE,
     merge_associations_from_tsv,
     write_gene_association_ttl,
@@ -23,18 +23,17 @@ def main() -> None:
     panel_search_stats = merge_associations_from_tsv(
         config['panelsearch_association_path'],
         nando_ncbi_gene_map,
-        1,
-        3,
+        'NANDO',
+        'GeneID',
         "PanelSearch",
-        skip_first_line=True,
     )
     print(f"NANDO_NCBIGene PanelSearch Count : {panel_search_stats.added}")
 
     nanbyou_stats = merge_associations_from_tsv(
         config['panelsearch_manual_path'],
         nando_ncbi_gene_map,
-        4,
-        7,
+        'NANDO',
+        'NCBI',
         "Nanbyou",
         skip_first_line=True,
     )

@@ -206,7 +206,7 @@ def load_gencc_submission_records(
         if row is None:
             break
 
-        gencc_id = row[0].strip()
+        gencc_id = row[0].replace(" ", "")
         hgnc_id  = row[1].strip().removeprefix('HGNC:')
         disease_curie = row[2].strip()
         disease_reference = to_gencc_disease_reference(disease_curie)

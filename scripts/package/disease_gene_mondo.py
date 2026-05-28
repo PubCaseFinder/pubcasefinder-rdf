@@ -3,10 +3,10 @@ from __future__ import annotations
 from rdflib import URIRef
 
 from utils.log_util import get_logger
-from rdf_build_support import (
+from package.rdf_build_support import (
     load_config
 )
-from scripts.package.disease_gene_association_util import (
+from package.disease_gene_association_util import (
     GENCC_SOURCE_URI,
     OBO,
     build_mondo_gene_associations,
@@ -17,7 +17,13 @@ logger = get_logger()
 
 def main() -> None:
     config = load_config('config.ini')
-    mondo_ncbi_gene_map = build_mondo_gene_associations()
+    mondo_ncbi_gene_map = build_mondo_gene_associations(
+        config['ncbigene_file_path'],
+        config['mondo_owl_path'],
+        config['gencc_submissions_path'],
+        config['medgen_mim2gene_path'],
+        config['orphanet_product6_path']
+    )
     print(f"MONDO_Gene_Association Count : {len(mondo_ncbi_gene_map)}")
 
     source_uri_map = {
