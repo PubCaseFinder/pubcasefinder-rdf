@@ -488,12 +488,12 @@ def check_file_char_code(path: str | Path) -> str | Path:
     char_code = ''
     if Path(path).suffix == '.gz':
         with gzip.open(path, 'rb') as f:
-            char_code = chardet.detect(f.readline(), include_encodings=['utf-8','cp949'])
+            char_code = chardet.detect(f.read(), include_encodings=['utf-8','cp949'])
         print('文字列コード:', char_code['encoding'])
         return create_utf8_file(path, char_code['encoding'])
     else:
         with open(path, 'rb') as f:
-            char_code = chardet.detect(f.readline(), include_encodings=['utf-8','cp949'])
+            char_code = chardet.detect(f.read(), include_encodings=['utf-8','cp949'])
         print('文字列コード:', char_code['encoding'])
         return create_utf8_file(path, char_code['encoding'])
 

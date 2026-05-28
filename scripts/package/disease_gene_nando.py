@@ -34,8 +34,7 @@ def main() -> None:
         nando_ncbi_gene_map,
         'NANDO',
         'NCBI',
-        "Nanbyou",
-        skip_first_line=True,
+        "Nanbyou"
     )
     print(f"NANDO_NCBIGene Nanbyou Count : {nanbyou_stats.added}")
     print(f"NANDO_NCBIGene Overlap : {nanbyou_stats.overlap}")
