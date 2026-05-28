@@ -132,18 +132,20 @@ def load_omim_inheritance_map(path: str | Path) -> dict[str, list[str]]:
     return inheritance_map
 
 
-def load_configured_disease_mappings() -> DiseaseMappings:
-    return load_disease_mappings(MONDO_OWL_PATH)
+def load_configured_disease_mappings(path) -> DiseaseMappings:
+    return load_disease_mappings(path)
 
 
 def load_shared_reference_data(
         medgene_omim_hpo_path,
+        mondo_owl_path,
         kegg_disease_path,
         gene_review_path
 ) -> SharedReferenceData:
     return SharedReferenceData(
         inheritance_map=load_omim_inheritance_map(medgene_omim_hpo_path),
-        mappings=load_configured_disease_mappings(),
+        # TODO:
+        mappings=load_configured_disease_mappings(mondo_owl_path),
         kegg_map=load_kegg_map(kegg_disease_path),
         gene_reviews_map=load_gene_reviews_map(gene_review_path),
     )
