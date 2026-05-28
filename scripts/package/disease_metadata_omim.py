@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from package.rdf_build_support import (
+    load_config
+)
 from scripts.package.disease_metadata_util import (
     OMIM_MIM2GENE_PATH,
     RDF_DIR,
@@ -12,7 +15,8 @@ from scripts.package.disease_metadata_util import (
 
 
 def main() -> None:
-    omim_ids = load_omim_disease_ids(OMIM_MIM2GENE_PATH)
+    config = load_config('config.ini')
+    omim_ids = load_omim_disease_ids(config['omim_mim2gene_data_uri'])
     print(f"OMIM All Count : {len(omim_ids)}")
 
     reference_data = load_shared_reference_data()

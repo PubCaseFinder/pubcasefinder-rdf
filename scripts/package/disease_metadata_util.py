@@ -99,7 +99,6 @@ def load_omim_disease_ids(path: str | Path) -> list[str]:
         """
     res = con.execute(query_statement)
 
-    i = 0
     while True:
         row = res.fetchone()
         if row is None:
@@ -108,19 +107,28 @@ def load_omim_disease_ids(path: str | Path) -> list[str]:
         if row not in seen:
             seen.add(row)
             omim_ids.append(row)
-    
     return omim_ids
 
 def load_omim_inheritance_map(path: str | Path) -> dict[str, list[str]]:
     inheritance_map: dict[str, list[str]] = {}
-    with open_text_reader(path) as reader:
-        reader.readline()
-        for line in reader:
-            split = line.rstrip("\n").split("|")
-            if len(split) <= 5:
-                continue
-            if split[3] == "inheritance_type_of":
-                add_value(inheritance_map, split[1], split[5].replace("HP:", ""))
+
+    con = duckdb.connect()
+    query_statement = f"""
+        select
+            cast(MIM_number as varchar),
+            replace(HPO_ID, 'HP:', '')
+        from
+            read_csv('{path}', delim='|')
+        where
+            relationship = 'inheritance_type_of'
+
+        """
+    res = con.execute(query_statement)
+    while True:
+        row = res.fetchone()
+        if row is None:
+            break
+        add_value(inheritance_map, row[0], row[1])
     return inheritance_map
 
 
@@ -128,12 +136,16 @@ def load_configured_disease_mappings() -> DiseaseMappings:
     return load_disease_mappings(MONDO_OWL_PATH)
 
 
-def load_shared_reference_data() -> SharedReferenceData:
+def load_shared_reference_data(
+        medgene_omim_hpo_path,
+        kegg_disease_path,
+        gene_review_path
+) -> SharedReferenceData:
     return SharedReferenceData(
-        inheritance_map=load_omim_inheritance_map(MEDGEN_OMIM_HPO_PATH),
+        inheritance_map=load_omim_inheritance_map(medgene_omim_hpo_path),
         mappings=load_configured_disease_mappings(),
-        kegg_map=load_kegg_map(KEGG_DISEASE_PATH),
-        gene_reviews_map=load_gene_reviews_map(GENE_REVIEWS_PATH),
+        kegg_map=load_kegg_map(kegg_disease_path),
+        gene_reviews_map=load_gene_reviews_map(gene_review_path),
     )
 
 
