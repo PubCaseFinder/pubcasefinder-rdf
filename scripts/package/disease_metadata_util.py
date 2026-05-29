@@ -5,6 +5,8 @@ from pathlib import Path
 import re
 
 import duckdb
+from rdflib import Graph, URIRef
+from rdflib.namespace import OWL, SKOS
 
 from package.rdf_build_support import (
     load_config,
@@ -133,7 +135,10 @@ def load_omim_inheritance_map(path: str | Path) -> dict[str, list[str]]:
 
 
 def load_configured_disease_mappings(path) -> DiseaseMappings:
-    return load_disease_mappings(path)
+    path = Path(path)
+    if path.suffix.lower() == ".obo":
+        return load_disease_mappings_from_obo(path)
+    return load_disease_mappings_from_owl(path)
 
 
 def load_shared_reference_data(
@@ -151,72 +156,52 @@ def load_shared_reference_data(
     )
 
 
-def load_disease_mappings(path: str | Path) -> DiseaseMappings:
-    path = Path(path)
-    if path.suffix.lower() == ".obo":
-        return load_disease_mappings_from_obo(path)
-    return load_disease_mappings_from_owl(path)
-
-
 def load_disease_mappings_from_owl(mondo_owl_path: str | Path) -> DiseaseMappings:
     mappings = DiseaseMappings()
-    current_mondo_id: str | None = None
-    current_is_deprecated = False
-    current_class_depth = 0
-    omim_ids: list[str] = []
-    orphanet_ids: list[str] = []
-    umls_ids: list[str] = []
+    graph = Graph()
+    graph.parse(str(mondo_owl_path), format="xml")
 
-    with open_text_reader(mondo_owl_path) as reader:
-        for line in reader:
-            trimmed = line.strip()
+    # 以下はこれ相当の処理
+    # PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+    # PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    # SELECT ?s ?exactmatch
+    # WHERE {
+    #   ?s skos:exactMatch ?exactmatch .
+    #   FILTER STRSTARTS(STR(?s), "http://purl.obolibrary.org/obo/MONDO_")
+    #   FILTER NOT EXISTS {
+    #     ?s owl:deprecated ?deprecated .
+    #     FILTER(LCASE(STR(?deprecated)) = "true")
+    #   }
+    # }
+    # ORDER BY ?s ?exactmatch
+    mondo_uris = sorted(set(graph.subjects(SKOS.exactMatch, None)), key=str)
+    for mondo_uri in mondo_uris:
+        mondo_id = extract_mondo_id_from_uri(mondo_uri)
+        if mondo_id is None or is_deprecated_resource(graph, mondo_uri):
+            continue
 
-            if current_mondo_id is not None:
-                if (
-                    trimmed
-                    == '<owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>'
-                ):
-                    current_is_deprecated = True
-                elif not current_is_deprecated and trimmed.startswith('<skos:exactMatch rdf:resource="'):
-                    exact_match_uri = extract_uri_value(trimmed)
-                    if exact_match_uri is not None:
-                        omim_id = extract_id_from_uri(exact_match_uri, "/entry/")
-                        if omim_id is not None and omim_id.isdigit():
-                            _append_unique(omim_ids, omim_id)
+        omim_ids: list[str] = []
+        orphanet_ids: list[str] = []
+        umls_ids: list[str] = []
 
-                        orphanet_id = extract_id_from_uri(exact_match_uri, "Orphanet_")
-                        if orphanet_id is not None and orphanet_id.isdigit():
-                            _append_unique(orphanet_ids, orphanet_id)
+        exact_match_uris = sorted(graph.objects(mondo_uri, SKOS.exactMatch), key=str)
+        for exact_match_uri in exact_match_uris:
+            match extract_exact_match_id(str(exact_match_uri)):
+                case ("omim", disease_id):
+                    _append_unique(omim_ids, disease_id)
+                case ("orphanet", disease_id):
+                    _append_unique(orphanet_ids, disease_id)
+                case ("umls", disease_id):
+                    _append_unique(umls_ids, disease_id)
 
-                        umls_id = extract_id_from_uri(exact_match_uri, "/id/C")
-                        if umls_id is not None and umls_id.isdigit():
-                            _append_unique(umls_ids, "C" + umls_id)
-
-                current_class_depth += trimmed.count("<owl:Class")
-                current_class_depth -= trimmed.count("</owl:Class>")
-                if current_class_depth <= 0:
-                    finalize_mondo_term(
-                        mappings,
-                        current_mondo_id,
-                        omim_ids,
-                        orphanet_ids,
-                        umls_ids,
-                        current_is_deprecated,
-                    )
-                    current_mondo_id = None
-                    current_is_deprecated = False
-                    current_class_depth = 0
-                    omim_ids = []
-                    orphanet_ids = []
-                    umls_ids = []
-                continue
-
-            if not trimmed.startswith('<owl:Class rdf:about="http://purl.obolibrary.org/obo/MONDO_'):
-                continue
-
-            current_mondo_id = extract_mondo_id_from_uri_line(trimmed)
-            current_is_deprecated = False
-            current_class_depth = 1
+        finalize_mondo_term(
+            mappings,
+            mondo_id,
+            omim_ids,
+            orphanet_ids,
+            umls_ids,
+            obsolete=False,
+        )
 
     return mappings
 
@@ -313,40 +298,27 @@ def finalize_mondo_term(
             add_value(mappings.orphanet_to_umls, orphanet_id, umls_id)
 
 
-def extract_mondo_id_from_uri_line(line: str) -> str | None:
-    marker = "http://purl.obolibrary.org/obo/MONDO_"
-    start = line.find(marker)
-    if start < 0:
-        return None
-
-    value_start = start + len(marker)
-    value_end = value_start
-    while value_end < len(line) and line[value_end].isdigit():
-        value_end += 1
-    return line[value_start:value_end] if value_end > value_start else None
+def extract_mondo_id_from_uri(uri: URIRef) -> str | None:
+    match = re.search(r"/MONDO_(\d+)$", str(uri))
+    return match.group(1) if match else None
 
 
-def extract_uri_value(line: str) -> str | None:
-    prefix = 'rdf:resource="'
-    start = line.find(prefix)
-    if start < 0:
-        return None
-
-    value_start = start + len(prefix)
-    value_end = line.find('"', value_start)
-    return line[value_start:value_end] if value_end > value_start else None
+def is_deprecated_resource(graph: Graph, uri: URIRef) -> bool:
+    return any(str(value).strip().lower() == "true" for value in graph.objects(uri, OWL.deprecated))
 
 
-def extract_id_from_uri(uri: str, marker: str) -> str | None:
-    start = uri.find(marker)
-    if start < 0:
-        return None
+def extract_exact_match_id(uri: str) -> tuple[str, str] | None:
+    patterns = (
+        ("omim", r"(?:omim\.org/entry/|/omim/)(\d+)"),
+        ("orphanet", r"Orphanet_(\d+)"),
+        ("umls", r"/id/(C\d+)"),
+    )
 
-    start += len(marker)
-    end = start
-    while end < len(uri) and uri[end].isdigit():
-        end += 1
-    return uri[start:end] if end > start else None
+    for source, pattern in patterns:
+        match = re.search(pattern, uri)
+        if match:
+            return source, match.group(1)
+    return None
 
 
 def load_kegg_map(path: str | Path) -> dict[str, str]:

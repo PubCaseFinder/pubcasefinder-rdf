@@ -32,6 +32,96 @@ C0001080|100800|ACHONDROPLASIA|inheritance_type_of|C0443147|HP:0000006|Autosomal
 C0001080|100800|ACHONDROPLASIA|inheritance_type_of|C0443147|HP:0000006|Autosomal dominant inheritance|Autosomal dominant inheritance|GTR|Intellectual Product|
 """
 
+mondo_owl_content = """\
+<?xml version="1.0"?>
+<rdf:RDF
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#">
+    <owl:Class rdf:about="http://purl.obolibrary.org/obo/MONDO_0000001">
+        <skos:exactMatch rdf:resource="https://omim.org/entry/100100"/>
+        <skos:exactMatch rdf:resource="http://www.orpha.net/ORDO/Orphanet_123"/>
+        <skos:exactMatch rdf:resource="http://linkedlifedata.com/resource/umls/id/C0000001"/>
+    </owl:Class>
+    <owl:Class rdf:about="http://purl.obolibrary.org/obo/MONDO_0000002">
+        <skos:exactMatch rdf:resource="http://identifiers.org/omim/100200"/>
+    </owl:Class>
+    <owl:Class rdf:about="http://purl.obolibrary.org/obo/MONDO_9999999">
+        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <skos:exactMatch rdf:resource="https://omim.org/entry/999999"/>
+        <skos:exactMatch rdf:resource="http://www.orpha.net/ORDO/Orphanet_999"/>
+    </owl:Class>
+</rdf:RDF>
+"""
+
+mondo_owl_orhanet_content = """\
+<?xml version="1.0"?>
+<rdf:RDF xmlns="http://purl.obolibrary.org/obo/mondo/mondo-international.owl#"
+     xml:base="http://purl.obolibrary.org/obo/mondo/mondo-international.owl"
+     xmlns:dc="http://purl.org/dc/elements/1.1/"
+     xmlns:obo="http://purl.obolibrary.org/obo/"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:doap="http://usefulinc.com/ns/doap#"
+     xmlns:foaf="http://xmlns.com/foaf/0.1/"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+     xmlns:mondo="http://purl.obolibrary.org/obo/mondo#"
+     xmlns:sssom="https://w3id.org/sssom/"
+     xmlns:terms="http://purl.org/dc/terms/"
+     xmlns:vocab="https://w3id.org/semapv/vocab/"
+     xmlns:babelon="https://w3id.org/babelon/"
+     xmlns:protege="http://protege.stanford.edu/plugins/owl/protege#"
+     xmlns:oboInOwl="http://www.geneontology.org/formats/oboInOwl#">
+    <owl:Class rdf:about="http://purl.obolibrary.org/obo/MONDO_0000001">
+        <skos:exactMatch rdf:resource="https://omim.org/entry/100100"/>
+        <skos:exactMatch rdf:resource="http://www.orpha.net/ORDO/Orphanet_123"/>
+        <skos:exactMatch rdf:resource="http://linkedlifedata.com/resource/umls/id/C0000001"/>
+    </owl:Class>
+    <owl:Class rdf:about="http://purl.obolibrary.org/obo/MONDO_0000107">
+        <rdfs:subClassOf rdf:resource="http://purl.obolibrary.org/obo/MONDO_0007500"/>
+        <obo:IAO_0000115>Auriculo-condylar syndrome (ACS) presents with bilateral external ear malformations (&apos;question mark&apos; ears), mandibular condyle hypoplasia, microstomia, micrognathia, microglossia and facial asymmetry. Additional manifestations include hypotonia, ptosis, cleft palate, puffy cheeks, developmental delay, impaired hearing and respiratory distress.</obo:IAO_0000115>
+        <mondo:curated_content_resource rdf:datatype="http://www.w3.org/2001/XMLSchema#anyURI">https://www.malacards.org/card/auriculocondylar_syndrome</mondo:curated_content_resource>
+        <mondo:excluded_from_qc_check rdf:resource="http://purl.obolibrary.org/obo/mondo/sparql/qc/general/qc-single-child.sparql"/>
+        <mondo:excluded_subClassOf rdf:resource="http://purl.obolibrary.org/obo/MONDO_0015397"/>
+        <mondo:should_conform_to rdf:resource="http://purl.obolibrary.org/obo/mondo/patterns/OMIM_phenotypic_series.yaml"/>
+        <oboInOwl:hasDbXref>GARD:0009798</oboInOwl:hasDbXref>
+        <oboInOwl:hasDbXref>MEDGEN:355953</oboInOwl:hasDbXref>
+        <oboInOwl:hasDbXref>MESH:C538270</oboInOwl:hasDbXref>
+        <oboInOwl:hasDbXref>OMIMPS:602483</oboInOwl:hasDbXref>
+        <oboInOwl:hasDbXref>Orphanet:137888</oboInOwl:hasDbXref>
+        <oboInOwl:hasDbXref>SCTID:702443003</oboInOwl:hasDbXref>
+        <oboInOwl:hasDbXref>UMLS:C1865295</oboInOwl:hasDbXref>
+        <oboInOwl:hasDbXref>icd11.foundation:1545895796</oboInOwl:hasDbXref>
+        <oboInOwl:hasExactSynonym>auriculo-condylar syndrome</oboInOwl:hasExactSynonym>
+        <oboInOwl:hasExactSynonym>question mark ear syndrome</oboInOwl:hasExactSynonym>
+        <oboInOwl:hasRelatedSynonym>dysgnathia complex</oboInOwl:hasRelatedSynonym>
+        <oboInOwl:hasRelatedSynonym>ears prominent and constricted</oboInOwl:hasRelatedSynonym>
+        <oboInOwl:hasRelatedSynonym>question mark ear</oboInOwl:hasRelatedSynonym>
+        <oboInOwl:hasRelatedSynonym>question-mark ear syndrome</oboInOwl:hasRelatedSynonym>
+        <oboInOwl:id>MONDO:0000107</oboInOwl:id>
+        <oboInOwl:inSubset rdf:resource="http://purl.obolibrary.org/obo/mondo#gard_rare"/>
+        <oboInOwl:inSubset rdf:resource="http://purl.obolibrary.org/obo/mondo#nord_rare"/>
+        <oboInOwl:inSubset rdf:resource="http://purl.obolibrary.org/obo/mondo#ordo_disorder"/>
+        <oboInOwl:inSubset rdf:resource="http://purl.obolibrary.org/obo/mondo#ordo_malformation_syndrome"/>
+        <oboInOwl:inSubset rdf:resource="http://purl.obolibrary.org/obo/mondo#orphanet_rare"/>
+        <oboInOwl:inSubset rdf:resource="http://purl.obolibrary.org/obo/mondo#otar"/>
+        <oboInOwl:inSubset rdf:resource="http://purl.obolibrary.org/obo/mondo#rare"/>
+        <rdfs:label>auriculocondylar syndrome</rdfs:label>
+        <rdfs:label xml:lang="ja">耳下顎関節頭症候群</rdfs:label>
+        <skos:exactMatch rdf:resource="http://id.who.int/icd/entity/1545895796"/>
+        <skos:exactMatch rdf:resource="http://identifiers.org/medgen/355953"/>
+        <skos:exactMatch rdf:resource="http://identifiers.org/mesh/C538270"/>
+        <skos:exactMatch rdf:resource="http://identifiers.org/snomedct/702443003"/>
+        <skos:exactMatch rdf:resource="http://linkedlifedata.com/resource/umls/id/C1865295"/>
+        <skos:exactMatch rdf:resource="http://www.orpha.net/ORDO/Orphanet_137888"/>
+        <skos:exactMatch rdf:resource="https://omim.org/phenotypicSeries/PS602483"/>
+    </owl:Class>
+</rdf:RDF>
+"""
+
 def test_load_omim_disease_ids(tmp_path):
     mim2gene_path = (tmp_path / 'mim2gene.txt').as_posix()
     create_mock_file(mim2gene_path, mim2gene_content)
@@ -55,3 +145,109 @@ def test_load_omim_inheritance_map(tmp_path):
         '100800': ['0000006'],
     }
     assert inheritance_map == expect_inheritance_map
+
+def test_load_disease_mappings_from_owl(tmp_path):
+    mondo_owl_path = (tmp_path / 'mondo.owl').as_posix()
+    create_mock_file(mondo_owl_path, mondo_owl_content)
+
+    mappings = disease_metadata_util.load_disease_mappings_from_owl(mondo_owl_path)
+
+    assert mappings.omim_to_mondo == {
+        '100100': ['0000001'],
+        '100200': ['0000002'],
+    }
+    assert mappings.omim_to_umls == {'100100': ['C0000001']}
+    assert mappings.orphanet_ids == ['123']
+    assert mappings.orphanet_to_mondo == {'123': '0000001'}
+    assert mappings.orphanet_to_omim == {'123': '100100'}
+    assert mappings.orphanet_to_umls == {'123': ['C0000001']}
+
+def test_load_disease_mappings_from_owl(tmp_path):
+    mondo_owl_path = (tmp_path / 'mondo.owl').as_posix()
+    create_mock_file(mondo_owl_path, mondo_owl_orhanet_content)
+    mappings = disease_metadata_util.load_disease_mappings_from_owl(mondo_owl_path)
+    expect_mappings = disease_metadata_util.DiseaseMappings(
+        omim_to_mondo = {
+            '100100': ['0000001']
+        },
+        omim_to_umls = {
+            '100100': ['C0000001']
+        },
+        orphanet_to_mondo = {
+            '123': '0000001',
+            '137888': '0000107'
+        },
+        orphanet_to_omim = {
+            '123': '100100'
+        },
+        orphanet_to_umls = {
+            '123': ['C0000001'],
+            '137888': ['C1865295']
+        },
+        orphanet_ids = [
+            '123',
+            '137888'
+        ]
+    )
+    assert mappings.omim_to_mondo == expect_mappings.omim_to_mondo
+    assert mappings.omim_to_umls == expect_mappings.omim_to_umls
+    assert mappings.orphanet_to_mondo == expect_mappings.orphanet_to_mondo
+    assert mappings.orphanet_to_omim == expect_mappings.orphanet_to_omim
+    assert mappings.orphanet_to_umls == expect_mappings.orphanet_to_umls
+    assert mappings.orphanet_ids == expect_mappings.orphanet_ids
+
+
+def test_finalize_mondo_term():
+    mappings = disease_metadata_util.DiseaseMappings()
+    mock_data_list = [
+        {
+            'mondo_id': '0000001',
+            'omim_ids': ['100100'],
+            'orphanet_ids': ['123'],
+            'umls_ids': ['C0000001']
+        },
+        {
+            'mondo_id': '0000107',
+            'omim_ids': [],
+            'orphanet_ids': ['137888'],
+            'umls_ids': ['C1865295']
+        }
+    ]
+    for mock_data in mock_data_list:
+        disease_metadata_util.finalize_mondo_term(
+            mappings,
+            mock_data['mondo_id'],
+            mock_data['omim_ids'],
+            mock_data['orphanet_ids'],
+            mock_data['umls_ids'],
+            obsolete=False,
+        )
+    expect_mappings = disease_metadata_util.DiseaseMappings(
+        omim_to_mondo = {
+            '100100': ['0000001']
+        },
+        omim_to_umls = {
+            '100100': ['C0000001']
+        },
+        orphanet_to_mondo = {
+            '123': '0000001',
+            '137888': '0000107'
+        },
+        orphanet_to_omim = {
+            '123': '100100'
+        },
+        orphanet_to_umls = {
+            '123': ['C0000001'],
+            '137888': ['C1865295']
+        },
+        orphanet_ids = [
+            '123',
+            '137888'
+        ]
+    )
+    assert mappings.omim_to_mondo == expect_mappings.omim_to_mondo
+    assert mappings.omim_to_umls == expect_mappings.omim_to_umls
+    assert mappings.orphanet_to_mondo == expect_mappings.orphanet_to_mondo
+    assert mappings.orphanet_to_omim == expect_mappings.orphanet_to_omim
+    assert mappings.orphanet_to_umls == expect_mappings.orphanet_to_umls
+    assert mappings.orphanet_ids == expect_mappings.orphanet_ids
