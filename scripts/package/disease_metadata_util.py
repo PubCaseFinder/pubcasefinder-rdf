@@ -305,13 +305,19 @@ def extract_exact_match_id(uri: str) -> tuple[str, str] | None:
 
 def load_kegg_map(path: str | Path) -> dict[str, str]:
     kegg_map: dict[str, str] = {}
-    with open_text_reader(path) as reader:
-        for line in reader:
-            split = line.rstrip("\n").split("\t")
-            if len(split) > 1 and split[0] not in kegg_map:
-                kegg_map[split[0]] = split[1]
+    con = duckdb.connect()
+    query_statement = f"""
+        select
+            *
+        from read_csv('{path}', delim='\t')
+        """
+    res = con.execute(query_statement)
+    while True:
+        row = res.fetchone()
+        if row is None:
+            break
+        kegg_map[str(row[0])] = row[1]
     return kegg_map
-
 
 def load_gene_reviews_map(path: str | Path) -> dict[str, list[str]]:
     gene_reviews_map: dict[str, list[str]] = {}

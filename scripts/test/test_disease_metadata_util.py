@@ -386,3 +386,21 @@ def test_finalize_mondo_term():
     assert mappings.orphanet_to_omim == expect_mappings.orphanet_to_omim
     assert mappings.orphanet_to_umls == expect_mappings.orphanet_to_umls
     assert mappings.orphanet_ids == expect_mappings.orphanet_ids
+
+def test_load_kegg_map(tmp_path):
+    kegg_path = tmp_path / 'kegg.tsv'
+    kegg_content = """
+100100	H02129
+100300	H01413
+100800	H00505
+100800	H01749
+"""
+    create_mock_file(kegg_path, kegg_content)
+    kegg_map = disease_metadata_util.load_kegg_map(kegg_path)
+    expect_kegg_map = {
+        '100100': 'H02129',
+        '100300': 'H01413',
+        '100800': 'H00505',
+        '100800': 'H01749',
+    }
+    assert kegg_map == expect_kegg_map
