@@ -4,7 +4,9 @@ from dataclasses import dataclass
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
-from scripts.package.rdf_build_support import (
+import duckdb
+
+from package.rdf_build_support import (
     load_config,
     open_text_reader,
     open_text_writer,
@@ -14,21 +16,21 @@ from scripts.package.rdf_build_support import (
 )
 
 
-CONFIG = load_config()
+# CONFIG = load_config()
 
-ORPHANET_PRODUCT4_PATH = resolve_configured_file(
-    CONFIG,
-    "orphanet.product4.path",
-    resolve_resource_root(CONFIG, "orphanet.dir"),
-    "en_product4.xml",
-)
-HPO_PHENOTYPE_PATH = resolve_configured_file(
-    CONFIG,
-    "hpo.phenotype.path",
-    resolve_resource_root(CONFIG, "hpo.dir"),
-    "phenotype.hpoa",
-)
-RDF_DIR = resolve_configured_output_dir(CONFIG)
+# ORPHANET_PRODUCT4_PATH = resolve_configured_file(
+#     CONFIG,
+#     "orphanet.product4.path",
+#     resolve_resource_root(CONFIG, "orphanet.dir"),
+#     "en_product4.xml",
+# )
+# HPO_PHENOTYPE_PATH = resolve_configured_file(
+#     CONFIG,
+#     "hpo.phenotype.path",
+#     resolve_resource_root(CONFIG, "hpo.dir"),
+#     "phenotype.hpoa",
+# )
+# RDF_DIR = resolve_configured_output_dir(CONFIG)
 HPOA_SOURCE_URI = (
     "http://compbio.charite.de/jenkins/job/hpo.annotations.current/"
     "lastSuccessfulBuild/artifact/current/phenotype.hpoa"
@@ -91,22 +93,28 @@ def load_manual_phenotype_associations(
     manual_associations: dict[str, str] = {}
     prefix = f"{disease_prefix}:"
 
-    with open_text_reader(phenotype_hpoa_path) as reader:
-        for line in reader:
-            if line.startswith("#"):
-                continue
+    con = duckdb.connect()
+    query_statement = f"""
+        select
+            replace(database_id, '{prefix}', ''),
+            replace(hpo_id, 'HP:', '')
+        from
+            read_csv('{phenotype_hpoa_path}', delim='\t')
+        where
+            prefix(database_id, '{prefix}')
+        """
+    res = con.execute(query_statement)
 
-            split = line.rstrip("\n").split("\t")
-            if len(split) <= 3 or not split[0].startswith(prefix):
-                continue
-
-            disease_id = split[0][len(prefix) :].strip()
-            hpo_id = normalize_hpo_id(split[3])
-            key = f"{disease_id}\t{hpo_id}"
-            manual_associations.setdefault(key, "Manual")
+    while True:
+        row = res.fetchone()
+        if row is None:
+            break
+        disease_id = row[0]
+        hpo_id = row[1]
+        key = f"{disease_id}\t{hpo_id}"
+        manual_associations.setdefault(key, "Manual")
 
     return manual_associations
-
 
 def extract_frequency_label(hpo_frequency_element: ET.Element | None) -> str | None:
     if hpo_frequency_element is None:
