@@ -7,8 +7,8 @@ import re
 import fastobo
 
 import duckdb
-from rdflib import Graph, URIRef
-from rdflib.namespace import OWL, SKOS
+from rdflib import Graph, Literal, Namespace, URIRef
+from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS
 
 from package.rdf_build_support import (
     load_config,
@@ -19,42 +19,14 @@ from package.rdf_build_support import (
 )
 
 
-# CONFIG = load_config()
-
-# OMIM_MIM2GENE_PATH = resolve_configured_file(
-#     CONFIG,
-#     "omim.mim2gene.path",
-#     resolve_resource_root(CONFIG, "omim.dir"),
-#     "mim2gene.txt",
-# )
-# MEDGEN_OMIM_HPO_PATH = resolve_configured_file(
-#     CONFIG,
-#     "medgen.omim.hpo.path",
-#     resolve_resource_root(CONFIG, "medgen.dir"),
-#     "MedGen_HPO_OMIM_Mapping.txt.gz",
-#     alternate_file_names=("MedGen_HPO_OMIM_Mapping.txt",),
-# )
-# MONDO_OWL_PATH = resolve_configured_file(
-#     CONFIG,
-#     "mondo.owl.path",
-#     resolve_resource_root(CONFIG, "mondo.dir"),
-#     "mondo-international.owl",
-#     alternate_file_names=("mondo.owl", "mondo.obo"),
-# )
-# KEGG_DISEASE_PATH = resolve_configured_file(
-#     CONFIG,
-#     "kegg.disease.path",
-#     resolve_resource_root(CONFIG, "kegg.dir"),
-#     "KEGG_disease.tsv",
-# )
-# GENE_REVIEWS_PATH = resolve_configured_file(
-#     CONFIG,
-#     "genereviews.omim.path",
-#     resolve_resource_root(CONFIG, "genereviews.dir"),
-#     "NBKid_shortname_OMIM.txt",
-# )
-# RDF_DIR = resolve_configured_output_dir(CONFIG)
-
+GENEREVIEWS = Namespace("https://www.ncbi.nlm.nih.gov/books/")
+GTR = Namespace("https://www.ncbi.nlm.nih.gov/gtr/all/tests/?term=")
+KEGG = Namespace("http://www.kegg.jp/entry/")
+NANDO = Namespace("http://nanbyodata.jp/ontology/nando#")
+NCIT = Namespace("http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#")
+MED2RDF = Namespace("http://med2rdf.org/ontology/")
+MIM = Namespace("https://omim.org/entry/")
+OBO = Namespace("http://purl.obolibrary.org/obo/")
 
 @dataclass
 class DiseaseMappings:
@@ -342,47 +314,44 @@ def write_omim_disease_ttl(
     kegg_map: dict[str, str],
     gene_reviews_map: dict[str, list[str]],
 ) -> None:
+    graph = Graph()
+    graph.bind("dcterms", DCTERMS)
+    graph.bind("genereviews", GENEREVIEWS)
+    graph.bind("gtr", GTR)
+    graph.bind("kegg", KEGG)
+    graph.bind("nando", NANDO)
+    graph.bind("ncit", NCIT)
+    graph.bind("med2rdf", MED2RDF)
+    graph.bind("mim", MIM)
+    graph.bind("obo", OBO)
+    graph.bind("rdf", RDF)
+    graph.bind("rdfs", RDFS)
+
+    for omim_id in omim_ids:
+        omim_id = str(omim_id)
+        disease = MIM[omim_id]
+
+        graph.add((disease, RDF.type, MED2RDF.Disease))
+        graph.add((disease, RDF.type, NCIT.C7057))
+        graph.add((disease, DCTERMS.identifier, Literal(omim_id)))
+
+        for inheritance_id in inheritance_map.get(omim_id, []):
+            graph.add((disease, NANDO.hasInheritance, OBO[f"HP_{inheritance_id}"]))
+
+        for mondo_id in mappings.omim_to_mondo.get(omim_id, []):
+            graph.add((disease, RDFS.seeAlso, OBO[f"MONDO_{mondo_id}"]))
+
+        if omim_id in kegg_map:
+            graph.add((disease, RDFS.seeAlso, KEGG[str(kegg_map[omim_id])]))
+
+        for gene_review_id in gene_reviews_map.get(omim_id, []):
+            graph.add((disease, RDFS.seeAlso, GENEREVIEWS[str(gene_review_id)]))
+
+        for umls_id in mappings.omim_to_umls.get(omim_id, []):
+            graph.add((disease, RDFS.seeAlso, GTR[str(umls_id)]))
+
     with open_text_writer(output_path) as writer:
-        writer.write("PREFIX dcterms: <http://purl.org/dc/terms/>\n")
-        writer.write("PREFIX genereviews: <https://www.ncbi.nlm.nih.gov/books/>\n")
-        writer.write("PREFIX gtr: <https://www.ncbi.nlm.nih.gov/gtr/all/tests/?term=>\n")
-        writer.write("PREFIX kegg: <http://www.kegg.jp/entry/>\n")
-        writer.write("PREFIX nando: <http://nanbyodata.jp/ontology/nando#>\n")
-        writer.write("PREFIX ncit: <http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#>\n")
-        writer.write("PREFIX med2rdf: <http://med2rdf.org/ontology/>\n")
-        writer.write("PREFIX mim: <https://omim.org/entry/>\n")
-        writer.write("PREFIX obo: <http://purl.obolibrary.org/obo/>\n")
-        writer.write("PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n")
-        writer.write("PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n")
-
-        for omim_id in omim_ids:
-            writer.write(f"mim:{omim_id}\n")
-            writer.write("    a med2rdf:Disease, ncit:C7057 ;\n")
-            writer.write(f'    dcterms:identifier "{omim_id}"')
-
-            if omim_id in inheritance_map:
-                writer.write(" ;\n")
-                writer.write("    nando:hasInheritance ")
-                _write_values(writer, "obo:HP_", inheritance_map[omim_id])
-            if omim_id in mappings.omim_to_mondo:
-                writer.write(" ;\n")
-                writer.write("    rdfs:seeAlso ")
-                _write_values(writer, "obo:MONDO_", mappings.omim_to_mondo[omim_id])
-            if omim_id in kegg_map:
-                writer.write(" ;\n")
-                writer.write(f"    rdfs:seeAlso kegg:{kegg_map[omim_id]}")
-            if omim_id in gene_reviews_map:
-                writer.write(" ;\n")
-                writer.write("    rdfs:seeAlso ")
-                _write_values(writer, "genereviews:", gene_reviews_map[omim_id])
-            if omim_id in mappings.omim_to_umls:
-                writer.write(" ;\n")
-                writer.write("    rdfs:seeAlso ")
-                _write_values(writer, "gtr:", mappings.omim_to_umls[omim_id])
-                writer.write(" .\n")
-            else:
-                writer.write(" .\n")
-
+        writer.write(graph.serialize(format="turtle"))
 
 def write_orphanet_disease_ttl(
     output_path: str | Path,

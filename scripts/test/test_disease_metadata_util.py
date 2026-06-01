@@ -425,3 +425,81 @@ NBK1105	cdls2	122470
         '122470': ['NBK1104', 'NBK1105'],
     }
     assert gene_reviews_map == expect_gene_reviews_map
+
+def test_write_omim_disease_ttl(tmp_path):
+    output_path = tmp_path / 'OMIM.ttl'
+    mappings = disease_metadata_util.DiseaseMappings(
+        omim_to_mondo={
+            '100100': ['0000001', '0000002'],
+        },
+        omim_to_umls={
+            '100100': ['C0000001'],
+        },
+    )
+
+    disease_metadata_util.write_omim_disease_ttl(
+        output_path=output_path,
+        omim_ids=['100100', '100200'],
+        inheritance_map={
+            '100100': ['0000006'],
+            '100200': ['0000007'],
+        },
+        mappings=mappings,
+        kegg_map={
+            '100100': 'H02129',
+        },
+        gene_reviews_map={
+            '100100': ['NBK1103', 'NBK1104'],
+        },
+    )
+
+    graph = Graph()
+    graph.parse(output_path, format='turtle')
+
+    disease = disease_metadata_util.MIM['100100']
+    assert (disease, RDF.type, disease_metadata_util.MED2RDF.Disease) in graph
+    assert (disease, RDF.type, disease_metadata_util.NCIT.C7057) in graph
+    assert (disease, DCTERMS.identifier, Literal('100100')) in graph
+    assert (
+        disease,
+        disease_metadata_util.NANDO.hasInheritance,
+        disease_metadata_util.OBO['HP_0000006'],
+    ) in graph
+    assert (
+        disease,
+        disease_metadata_util.RDFS.seeAlso,
+        disease_metadata_util.OBO['MONDO_0000001'],
+    ) in graph
+    assert (
+        disease,
+        disease_metadata_util.RDFS.seeAlso,
+        disease_metadata_util.OBO['MONDO_0000002'],
+    ) in graph
+    assert (
+        disease,
+        disease_metadata_util.RDFS.seeAlso,
+        disease_metadata_util.KEGG['H02129'],
+    ) in graph
+    assert (
+        disease,
+        disease_metadata_util.RDFS.seeAlso,
+        disease_metadata_util.GENEREVIEWS['NBK1103'],
+    ) in graph
+    assert (
+        disease,
+        disease_metadata_util.RDFS.seeAlso,
+        disease_metadata_util.GENEREVIEWS['NBK1104'],
+    ) in graph
+    assert (
+        disease,
+        disease_metadata_util.RDFS.seeAlso,
+        disease_metadata_util.GTR['C0000001'],
+    ) in graph
+
+    disease_without_see_also = disease_metadata_util.MIM['100200']
+    assert (
+        disease_without_see_also,
+        disease_metadata_util.NANDO.hasInheritance,
+        disease_metadata_util.OBO['HP_0000007'],
+    ) in graph
+    assert list(graph.objects(disease_without_see_also, disease_metadata_util.RDFS.seeAlso)) == []
