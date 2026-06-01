@@ -5,9 +5,7 @@ from pathlib import Path
 from package.rdf_build_support import (
     load_config
 )
-from scripts.package.disease_metadata_util import (
-    OMIM_MIM2GENE_PATH,
-    RDF_DIR,
+from package.disease_metadata_util import (
     load_omim_disease_ids,
     load_shared_reference_data,
     write_omim_disease_ttl,
@@ -19,7 +17,12 @@ def main() -> None:
     omim_ids = load_omim_disease_ids(config['omim_mim2gene_data_uri'])
     print(f"OMIM All Count : {len(omim_ids)}")
 
-    reference_data = load_shared_reference_data()
+    reference_data = load_shared_reference_data(
+        config['medgen_omim_hpo_path'],
+        config['mondo_owl_path'],
+        config['kegg_disease_path'],
+        config['genereviews_omim_path']
+    )
     print(f"OMIM inheritance Count : {len(reference_data.inheritance_map)}")
 
     append_unique(omim_ids, reference_data.mappings.omim_to_mondo.keys())
@@ -27,7 +30,7 @@ def main() -> None:
     print(f"OMIM Gene_Review Count : {len(reference_data.gene_reviews_map)}")
 
     write_omim_disease_ttl(
-        Path(RDF_DIR) / "OMIM.ttl",
+        Path(config['rdf_output_dir']) / "OMIM.ttl",
         omim_ids,
         reference_data.inheritance_map,
         reference_data.mappings,
