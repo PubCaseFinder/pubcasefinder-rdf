@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 import re
+import fastobo
 
 import duckdb
 from rdflib import Graph, URIRef
@@ -80,6 +82,13 @@ class SharedReferenceData:
     gene_reviews_map: dict[str, list[str]]
 
 
+@dataclass
+class MondoExactMatches:
+    mondo_id: str
+    exact_matches: list[str] = field(default_factory=list)
+    obsolete: bool = False
+
+
 def add_value(mapping: dict[str, list[str]], key: str, value: str) -> None:
     values = mapping.setdefault(key, [])
     if value not in values:
@@ -134,11 +143,11 @@ def load_omim_inheritance_map(path: str | Path) -> dict[str, list[str]]:
     return inheritance_map
 
 
-def load_configured_disease_mappings(path) -> DiseaseMappings:
+def load_configured_disease_mappings(path: str | Path) -> DiseaseMappings:
     path = Path(path)
     if path.suffix.lower() == ".obo":
-        return load_disease_mappings_from_obo(path)
-    return load_disease_mappings_from_owl(path)
+        return build_disease_mappings(iter_mondo_exact_matches_from_obo(path))
+    return build_disease_mappings(iter_mondo_exact_matches_from_owl(path))
 
 
 def load_shared_reference_data(
@@ -157,36 +166,26 @@ def load_shared_reference_data(
 
 
 def load_disease_mappings_from_owl(mondo_owl_path: str | Path) -> DiseaseMappings:
-    mappings = DiseaseMappings()
-    graph = Graph()
-    graph.parse(str(mondo_owl_path), format="xml")
+    return build_disease_mappings(iter_mondo_exact_matches_from_owl(mondo_owl_path))
 
-    # 以下はこれ相当の処理
-    # PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-    # PREFIX owl: <http://www.w3.org/2002/07/owl#>
-    # SELECT ?s ?exactmatch
-    # WHERE {
-    #   ?s skos:exactMatch ?exactmatch .
-    #   FILTER STRSTARTS(STR(?s), "http://purl.obolibrary.org/obo/MONDO_")
-    #   FILTER NOT EXISTS {
-    #     ?s owl:deprecated ?deprecated .
-    #     FILTER(LCASE(STR(?deprecated)) = "true")
-    #   }
-    # }
-    # ORDER BY ?s ?exactmatch
-    mondo_uris = sorted(set(graph.subjects(SKOS.exactMatch, None)), key=str)
-    for mondo_uri in mondo_uris:
-        mondo_id = extract_mondo_id_from_uri(mondo_uri)
-        if mondo_id is None or is_deprecated_resource(graph, mondo_uri):
+
+def load_disease_mappings_from_obo(mondo_obo_path: str | Path) -> DiseaseMappings:
+    return build_disease_mappings(iter_mondo_exact_matches_from_obo(mondo_obo_path))
+
+
+def build_disease_mappings(terms: Iterable[MondoExactMatches]) -> DiseaseMappings:
+    mappings = DiseaseMappings()
+
+    for term in terms:
+        if term.obsolete:
             continue
 
         omim_ids: list[str] = []
         orphanet_ids: list[str] = []
         umls_ids: list[str] = []
 
-        exact_match_uris = sorted(graph.objects(mondo_uri, SKOS.exactMatch), key=str)
-        for exact_match_uri in exact_match_uris:
-            match extract_exact_match_id(str(exact_match_uri)):
+        for exact_match in term.exact_matches:
+            match extract_exact_match_id(exact_match):
                 case ("omim", disease_id):
                     _append_unique(omim_ids, disease_id)
                 case ("orphanet", disease_id):
@@ -196,7 +195,7 @@ def load_disease_mappings_from_owl(mondo_owl_path: str | Path) -> DiseaseMapping
 
         finalize_mondo_term(
             mappings,
-            mondo_id,
+            term.mondo_id,
             omim_ids,
             orphanet_ids,
             umls_ids,
@@ -206,71 +205,74 @@ def load_disease_mappings_from_owl(mondo_owl_path: str | Path) -> DiseaseMapping
     return mappings
 
 
-def load_disease_mappings_from_obo(mondo_obo_path: str | Path) -> DiseaseMappings:
-    mappings = DiseaseMappings()
+def iter_mondo_exact_matches_from_owl(mondo_owl_path: str | Path) -> Iterable[MondoExactMatches]:
+    graph = Graph()
+    graph.parse(str(mondo_owl_path), format="xml")
+
+    mondo_uris = sorted(set(graph.subjects(SKOS.exactMatch, None)), key=str)
+    for mondo_uri in mondo_uris:
+        mondo_id = extract_mondo_id_from_uri(mondo_uri)
+        if mondo_id is None:
+            continue
+
+        yield MondoExactMatches(
+            mondo_id=mondo_id,
+            exact_matches=[str(uri) for uri in sorted(graph.objects(mondo_uri, SKOS.exactMatch), key=str)],
+            obsolete=is_deprecated_resource(graph, mondo_uri),
+        )
+
+
+def iter_mondo_exact_matches_from_obo(mondo_obo_path: str | Path) -> Iterable[MondoExactMatches]:
     current_mondo_id: str | None = None
     current_is_deprecated = False
-    omim_ids: list[str] = []
-    orphanet_ids: list[str] = []
-    umls_ids: list[str] = []
+    exact_matches: list[str] = []
 
-    def flush_term() -> None:
-        nonlocal current_mondo_id, current_is_deprecated, omim_ids, orphanet_ids, umls_ids
-        finalize_mondo_term(
-            mappings,
-            current_mondo_id,
-            omim_ids,
-            orphanet_ids,
-            umls_ids,
-            current_is_deprecated,
+    def current_term() -> MondoExactMatches | None:
+        if current_mondo_id is None:
+            return None
+        return MondoExactMatches(
+            mondo_id=current_mondo_id,
+            exact_matches=exact_matches,
+            obsolete=current_is_deprecated,
         )
-        current_mondo_id = None
-        current_is_deprecated = False
-        omim_ids = []
-        orphanet_ids = []
-        umls_ids = []
 
     with open_text_reader(mondo_obo_path) as reader:
-        for raw_line in reader:
-            line = raw_line.strip()
-            if line == "[Term]":
-                flush_term()
-                continue
-            if line.startswith("[") and line.endswith("]"):
-                flush_term()
-                continue
+        doc = fastobo.load(reader)
+        for frame in doc:
+            if frame.id.prefix == 'MONDO':
+                
+            
 
-            if line.startswith("id: MONDO:"):
-                mondo_id = line.removeprefix("id: MONDO:")
-                current_mondo_id = mondo_id if mondo_id.isdigit() else None
-                continue
+        # for raw_line in reader:
+        #     line = raw_line.strip()
+        #     if line == "[Term]" or (line.startswith("[") and line.endswith("]")):
+        #         term = current_term()
+        #         if term is not None:
+        #             yield term
+        #         current_mondo_id = None
+        #         current_is_deprecated = False
+        #         exact_matches = []
+        #         continue
 
-            if current_mondo_id is None:
-                continue
+        #     if line.startswith("id: MONDO:"):
+        #         mondo_id = line.removeprefix("id: MONDO:")
+        #         current_mondo_id = mondo_id if mondo_id.isdigit() else None
+        #         continue
 
-            if line == "is_obsolete: true":
-                current_is_deprecated = True
-                continue
+        #     if current_mondo_id is None:
+        #         continue
 
-            if not line.startswith("xref: ") or 'source="MONDO:equivalentTo"' not in line:
-                continue
+        #     if line == "is_obsolete: true":
+        #         current_is_deprecated = True
+        #         continue
 
-            match = re.match(r"^xref: OMIM:(\d+)\b", line)
-            if match:
-                _append_unique(omim_ids, match.group(1))
-                continue
+        #     exact_match = extract_equivalent_obo_xref(line)
+        #     if exact_match is not None:
+        #         _append_unique(exact_matches, exact_match)
 
-            match = re.match(r"^xref: Orphanet:(\d+)\b", line)
-            if match:
-                _append_unique(orphanet_ids, match.group(1))
-                continue
-
-            match = re.match(r"^xref: UMLS:(C\d+)\b", line)
-            if match:
-                _append_unique(umls_ids, match.group(1))
-
-    flush_term()
-    return mappings
+    term = current_term()
+    if term is not None:
+        yield term
 
 
 def finalize_mondo_term(
@@ -307,11 +309,19 @@ def is_deprecated_resource(graph: Graph, uri: URIRef) -> bool:
     return any(str(value).strip().lower() == "true" for value in graph.objects(uri, OWL.deprecated))
 
 
+def extract_equivalent_obo_xref(line: str) -> str | None:
+    if not line.startswith("xref: ") or 'source="MONDO:equivalentTo"' not in line:
+        return None
+
+    match = re.match(r"^xref:\s+([^\s{!]+)", line)
+    return match.group(1) if match else None
+
+
 def extract_exact_match_id(uri: str) -> tuple[str, str] | None:
     patterns = (
-        ("omim", r"(?:omim\.org/entry/|/omim/)(\d+)"),
-        ("orphanet", r"Orphanet_(\d+)"),
-        ("umls", r"/id/(C\d+)"),
+        ("omim", r"(?:^OMIM:|omim\.org/entry/|/omim/)(\d+)"),
+        ("orphanet", r"(?:^Orphanet:|Orphanet_)(\d+)"),
+        ("umls", r"(?:^UMLS:|/id/)(C\d+)"),
     )
 
     for source, pattern in patterns:

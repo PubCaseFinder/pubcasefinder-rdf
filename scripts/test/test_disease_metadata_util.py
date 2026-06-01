@@ -122,6 +122,28 @@ mondo_owl_orhanet_content = """\
 </rdf:RDF>
 """
 
+mondo_obo_content = """\
+format-version: 1.2
+
+[Term]
+id: MONDO:0000001
+xref: OMIM:100100 {source="MONDO:equivalentTo"}
+xref: Orphanet:123 {source="MONDO:equivalentTo"}
+xref: UMLS:C0000001 {source="MONDO:equivalentTo"}
+
+[Term]
+id: MONDO:0000002
+xref: OMIM:100200 {source="MONDO:equivalentTo"}
+xref: OMIMPS:602483 {source="MONDO:equivalentTo"}
+xref: Orphanet:456 {source="MONDO:relatedTo"}
+
+[Term]
+id: MONDO:9999999
+is_obsolete: true
+xref: OMIM:999999 {source="MONDO:equivalentTo"}
+xref: Orphanet:999 {source="MONDO:equivalentTo"}
+"""
+
 def test_load_omim_disease_ids(tmp_path):
     mim2gene_path = (tmp_path / 'mim2gene.txt').as_posix()
     create_mock_file(mim2gene_path, mim2gene_content)
@@ -146,11 +168,11 @@ def test_load_omim_inheritance_map(tmp_path):
     }
     assert inheritance_map == expect_inheritance_map
 
-def test_load_disease_mappings_from_owl(tmp_path):
+def test_load_disease_mappings_from_owl_basic(tmp_path):
     mondo_owl_path = (tmp_path / 'mondo.owl').as_posix()
     create_mock_file(mondo_owl_path, mondo_owl_content)
 
-    mappings = disease_metadata_util.load_disease_mappings_from_owl(mondo_owl_path)
+    mappings = disease_metadata_util.load_disease_mappings(mondo_owl_path)
 
     assert mappings.omim_to_mondo == {
         '100100': ['0000001'],
@@ -162,7 +184,7 @@ def test_load_disease_mappings_from_owl(tmp_path):
     assert mappings.orphanet_to_omim == {'123': '100100'}
     assert mappings.orphanet_to_umls == {'123': ['C0000001']}
 
-def test_load_disease_mappings_from_owl(tmp_path):
+def test_load_disease_mappings_from_owl_orphanet(tmp_path):
     mondo_owl_path = (tmp_path / 'mondo.owl').as_posix()
     create_mock_file(mondo_owl_path, mondo_owl_orhanet_content)
     mappings = disease_metadata_util.load_disease_mappings_from_owl(mondo_owl_path)
@@ -195,6 +217,23 @@ def test_load_disease_mappings_from_owl(tmp_path):
     assert mappings.orphanet_to_omim == expect_mappings.orphanet_to_omim
     assert mappings.orphanet_to_umls == expect_mappings.orphanet_to_umls
     assert mappings.orphanet_ids == expect_mappings.orphanet_ids
+
+
+def test_load_disease_mappings_from_obo(tmp_path):
+    mondo_obo_path = (tmp_path / 'mondo.obo').as_posix()
+    create_mock_file(mondo_obo_path, mondo_obo_content)
+
+    mappings = disease_metadata_util.load_disease_mappings(mondo_obo_path)
+
+    assert mappings.omim_to_mondo == {
+        '100100': ['0000001'],
+        '100200': ['0000002'],
+    }
+    assert mappings.omim_to_umls == {'100100': ['C0000001']}
+    assert mappings.orphanet_ids == ['123']
+    assert mappings.orphanet_to_mondo == {'123': '0000001'}
+    assert mappings.orphanet_to_omim == {'123': '100100'}
+    assert mappings.orphanet_to_umls == {'123': ['C0000001']}
 
 
 def test_finalize_mondo_term():
