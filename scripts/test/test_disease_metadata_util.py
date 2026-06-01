@@ -168,22 +168,6 @@ def test_load_omim_inheritance_map(tmp_path):
     }
     assert inheritance_map == expect_inheritance_map
 
-def test_load_disease_mappings_from_owl_basic(tmp_path):
-    mondo_owl_path = (tmp_path / 'mondo.owl').as_posix()
-    create_mock_file(mondo_owl_path, mondo_owl_content)
-
-    mappings = disease_metadata_util.load_disease_mappings(mondo_owl_path)
-
-    assert mappings.omim_to_mondo == {
-        '100100': ['0000001'],
-        '100200': ['0000002'],
-    }
-    assert mappings.omim_to_umls == {'100100': ['C0000001']}
-    assert mappings.orphanet_ids == ['123']
-    assert mappings.orphanet_to_mondo == {'123': '0000001'}
-    assert mappings.orphanet_to_omim == {'123': '100100'}
-    assert mappings.orphanet_to_umls == {'123': ['C0000001']}
-
 def test_load_disease_mappings_from_owl_orphanet(tmp_path):
     mondo_owl_path = (tmp_path / 'mondo.owl').as_posix()
     create_mock_file(mondo_owl_path, mondo_owl_orhanet_content)
@@ -218,23 +202,135 @@ def test_load_disease_mappings_from_owl_orphanet(tmp_path):
     assert mappings.orphanet_to_umls == expect_mappings.orphanet_to_umls
     assert mappings.orphanet_ids == expect_mappings.orphanet_ids
 
+def test_iter_mondo_exact_matches_from_owl(tmp_path):
+    mondo_owl_path = (tmp_path / 'mondo.owl').as_posix()
+    create_mock_file(mondo_owl_path, mondo_owl_content)
+    mondo_list = disease_metadata_util.iter_mondo_exact_matches_from_owl(mondo_owl_path)
+    def create_expect_mondo_list():
+        pre_expect_mondo_list = [
+            {
+                'mondo_id': '0000001',
+                'exact_matches': [
+                    'http://linkedlifedata.com/resource/umls/id/C0000001',
+                    'http://www.orpha.net/ORDO/Orphanet_123',
+                    'https://omim.org/entry/100100',
+                ],
+                'obsolete': False
+            },
+            {
+                'mondo_id': '0000002',
+                'exact_matches': [
+                    'http://identifiers.org/omim/100200',
+                ],
+                'obsolete': False
+            },
+            {
+                'mondo_id': '9999999',
+                'exact_matches': [
+                    'http://www.orpha.net/ORDO/Orphanet_999',
+                    'https://omim.org/entry/999999',
+                ],
+                'obsolete': True
+            },
+        ]
+        for pre_expect_mondo in pre_expect_mondo_list:
+            yield disease_metadata_util.MondoExactMatches(
+                mondo_id=pre_expect_mondo['mondo_id'],
+                exact_matches=pre_expect_mondo['exact_matches'],
+                obsolete=pre_expect_mondo['obsolete']
+            )
+    expect_mondo_list = create_expect_mondo_list()
+    assert list(mondo_list) == list(expect_mondo_list)
 
-def test_load_disease_mappings_from_obo(tmp_path):
+def test_iter_mondo_exact_matches_from_obo(tmp_path):
+    mondo_owl_path = (tmp_path / 'mondo.obo').as_posix()
+    create_mock_file(mondo_owl_path, mondo_obo_content)
+    mondo_list = disease_metadata_util.iter_mondo_exact_matches_from_obo(mondo_owl_path)
+    def create_expect_mondo_list():
+        pre_expect_mondo_list = [
+            {
+                'mondo_id': '0000001',
+                'exact_matches': [
+                    'OMIM:100100',
+                    'Orphanet:123',
+                    'UMLS:C0000001',
+                ],
+                'obsolete': False
+            },
+            {
+                'mondo_id': '0000002',
+                'exact_matches': [
+                    'OMIM:100200',
+                    'OMIMPS:602483',
+                ],
+                'obsolete': False
+            },
+            {
+                'mondo_id': '9999999',
+                'exact_matches': [
+                    'OMIM:999999',
+                    'Orphanet:999',
+                ],
+                'obsolete': True
+            },
+        ]
+        for pre_expect_mondo in pre_expect_mondo_list:
+            yield disease_metadata_util.MondoExactMatches(
+                mondo_id=pre_expect_mondo['mondo_id'],
+                exact_matches=pre_expect_mondo['exact_matches'],
+                obsolete=pre_expect_mondo['obsolete']
+            )
+    expect_mondo_list = create_expect_mondo_list()
+    assert list(mondo_list) == list(expect_mondo_list)
+
+def assert_basic_disease_mappings(mappings):
+    expect_mappings = disease_metadata_util.DiseaseMappings(
+        omim_to_mondo = {
+            '100100': ['0000001'],
+            '100200': ['0000002'],
+        },
+        omim_to_umls = {
+            '100100': ['C0000001'],
+        },
+        orphanet_to_mondo = {
+            '123': '0000001',
+        },
+        orphanet_to_omim = {
+            '123': '100100',
+        },
+        orphanet_to_umls = {
+            '123': ['C0000001'],
+        },
+        orphanet_ids = [
+            '123',
+        ]
+    )
+    assert mappings.omim_to_mondo == expect_mappings.omim_to_mondo
+    assert mappings.omim_to_umls == expect_mappings.omim_to_umls
+    assert mappings.orphanet_to_mondo == expect_mappings.orphanet_to_mondo
+    assert mappings.orphanet_to_omim == expect_mappings.orphanet_to_omim
+    assert mappings.orphanet_to_umls == expect_mappings.orphanet_to_umls
+    assert mappings.orphanet_ids == expect_mappings.orphanet_ids
+
+def test_build_disease_mappings_from_obo_iterator(tmp_path):
     mondo_obo_path = (tmp_path / 'mondo.obo').as_posix()
     create_mock_file(mondo_obo_path, mondo_obo_content)
 
-    mappings = disease_metadata_util.load_disease_mappings(mondo_obo_path)
+    mappings = disease_metadata_util.build_disease_mappings(
+        disease_metadata_util.iter_mondo_exact_matches_from_obo(mondo_obo_path)
+    )
 
-    assert mappings.omim_to_mondo == {
-        '100100': ['0000001'],
-        '100200': ['0000002'],
-    }
-    assert mappings.omim_to_umls == {'100100': ['C0000001']}
-    assert mappings.orphanet_ids == ['123']
-    assert mappings.orphanet_to_mondo == {'123': '0000001'}
-    assert mappings.orphanet_to_omim == {'123': '100100'}
-    assert mappings.orphanet_to_umls == {'123': ['C0000001']}
+    assert_basic_disease_mappings(mappings)
 
+def test_build_disease_mappings_from_owl_iterator(tmp_path):
+    mondo_owl_path = (tmp_path / 'mondo.owl').as_posix()
+    create_mock_file(mondo_owl_path, mondo_owl_content)
+
+    mappings = disease_metadata_util.build_disease_mappings(
+        disease_metadata_util.iter_mondo_exact_matches_from_owl(mondo_owl_path)
+    )
+
+    assert_basic_disease_mappings(mappings)
 
 def test_finalize_mondo_term():
     mappings = disease_metadata_util.DiseaseMappings()

@@ -205,6 +205,7 @@ def build_disease_mappings(terms: Iterable[MondoExactMatches]) -> DiseaseMapping
     return mappings
 
 
+# graphのmondo_uri分、mondo_id, exactMatch対象, obsoleteのiteratorを返す
 def iter_mondo_exact_matches_from_owl(mondo_owl_path: str | Path) -> Iterable[MondoExactMatches]:
     graph = Graph()
     graph.parse(str(mondo_owl_path), format="xml")
@@ -218,61 +219,37 @@ def iter_mondo_exact_matches_from_owl(mondo_owl_path: str | Path) -> Iterable[Mo
         yield MondoExactMatches(
             mondo_id=mondo_id,
             exact_matches=[str(uri) for uri in sorted(graph.objects(mondo_uri, SKOS.exactMatch), key=str)],
-            obsolete=is_deprecated_resource(graph, mondo_uri),
+            obsolete=any(str(value).strip().lower() == "true" for value in graph.objects(mondo_uri, OWL.deprecated))
         )
 
-
+# oboのmondo_uri分、mondo_id, exactMatch対象, obsoleteのiteratorを返す
 def iter_mondo_exact_matches_from_obo(mondo_obo_path: str | Path) -> Iterable[MondoExactMatches]:
-    current_mondo_id: str | None = None
-    current_is_deprecated = False
-    exact_matches: list[str] = []
 
-    def current_term() -> MondoExactMatches | None:
+    doc = fastobo.load(mondo_obo_path)
+    for frame in doc:
+        current_mondo_id = None
+        current_is_deprecated = False
+        exact_matches = []
+
+        if frame.id.prefix == 'MONDO':
+            current_mondo_id = frame.id.local
+        for clause in frame:
+            match clause.raw_tag():
+                case 'is_obsolete':
+                    if clause.raw_value() == 'true':
+                        current_is_deprecated = True
+                case 'xref':
+                    exact_match = extract_equivalent_obo_xref(str(clause))
+                    if exact_match is not None:
+                        _append_unique(exact_matches, exact_match)
         if current_mondo_id is None:
-            return None
-        return MondoExactMatches(
+            continue
+        yield MondoExactMatches(
             mondo_id=current_mondo_id,
             exact_matches=exact_matches,
-            obsolete=current_is_deprecated,
+            obsolete=current_is_deprecated
         )
 
-    with open_text_reader(mondo_obo_path) as reader:
-        doc = fastobo.load(reader)
-        for frame in doc:
-            if frame.id.prefix == 'MONDO':
-                
-            
-
-        # for raw_line in reader:
-        #     line = raw_line.strip()
-        #     if line == "[Term]" or (line.startswith("[") and line.endswith("]")):
-        #         term = current_term()
-        #         if term is not None:
-        #             yield term
-        #         current_mondo_id = None
-        #         current_is_deprecated = False
-        #         exact_matches = []
-        #         continue
-
-        #     if line.startswith("id: MONDO:"):
-        #         mondo_id = line.removeprefix("id: MONDO:")
-        #         current_mondo_id = mondo_id if mondo_id.isdigit() else None
-        #         continue
-
-        #     if current_mondo_id is None:
-        #         continue
-
-        #     if line == "is_obsolete: true":
-        #         current_is_deprecated = True
-        #         continue
-
-        #     exact_match = extract_equivalent_obo_xref(line)
-        #     if exact_match is not None:
-        #         _append_unique(exact_matches, exact_match)
-
-    term = current_term()
-    if term is not None:
-        yield term
 
 
 def finalize_mondo_term(
@@ -303,11 +280,6 @@ def finalize_mondo_term(
 def extract_mondo_id_from_uri(uri: URIRef) -> str | None:
     match = re.search(r"/MONDO_(\d+)$", str(uri))
     return match.group(1) if match else None
-
-
-def is_deprecated_resource(graph: Graph, uri: URIRef) -> bool:
-    return any(str(value).strip().lower() == "true" for value in graph.objects(uri, OWL.deprecated))
-
 
 def extract_equivalent_obo_xref(line: str) -> str | None:
     if not line.startswith("xref: ") or 'source="MONDO:equivalentTo"' not in line:
