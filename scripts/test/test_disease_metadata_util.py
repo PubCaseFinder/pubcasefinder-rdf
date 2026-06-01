@@ -404,3 +404,24 @@ def test_load_kegg_map(tmp_path):
         '100800': 'H01749',
     }
     assert kegg_map == expect_kegg_map
+
+def test_load_gene_reviews_map(tmp_path):
+    gene_reviews_path = tmp_path / 'NBKid_shortname_OMIM.txt'
+    gene_reviews_content = """\
+#NBK_id	GR_shortname	OMIM
+NBK1103	trimethylaminuria	136132
+NBK1103	trimethylaminuria	602079
+NBK1104	cdls	122470
+NBK1105	cdls2	122470
+NBK1105	cdls2	122470
+"""
+    create_mock_file(gene_reviews_path, gene_reviews_content)
+
+    gene_reviews_map = disease_metadata_util.load_gene_reviews_map(gene_reviews_path)
+
+    expect_gene_reviews_map = {
+        '136132': ['NBK1103'],
+        '602079': ['NBK1103'],
+        '122470': ['NBK1104', 'NBK1105'],
+    }
+    assert gene_reviews_map == expect_gene_reviews_map

@@ -12,7 +12,6 @@ from rdflib.namespace import OWL, SKOS
 
 from package.rdf_build_support import (
     load_config,
-    open_text_reader,
     open_text_writer,
     resolve_configured_file,
     resolve_configured_output_dir,
@@ -158,7 +157,6 @@ def load_shared_reference_data(
 ) -> SharedReferenceData:
     return SharedReferenceData(
         inheritance_map=load_omim_inheritance_map(medgene_omim_hpo_path),
-        # TODO:
         mappings=load_configured_disease_mappings(mondo_owl_path),
         kegg_map=load_kegg_map(kegg_disease_path),
         gene_reviews_map=load_gene_reviews_map(gene_review_path),
@@ -321,12 +319,18 @@ def load_kegg_map(path: str | Path) -> dict[str, str]:
 
 def load_gene_reviews_map(path: str | Path) -> dict[str, list[str]]:
     gene_reviews_map: dict[str, list[str]] = {}
-    with open_text_reader(path) as reader:
-        reader.readline()
-        for line in reader:
-            split = line.rstrip("\n").split("\t")
-            if len(split) > 2:
-                add_value(gene_reviews_map, split[2], split[0])
+    con = duckdb.connect()
+    query_statement = f"""
+        select
+            *
+        from read_csv('{path}', delim='\t')
+        """
+    res = con.execute(query_statement)
+    while True:
+        row = res.fetchone()
+        if row is None:
+            break
+        add_value(gene_reviews_map, str(row[2]), str(row[0]))
     return gene_reviews_map
 
 
