@@ -503,3 +503,112 @@ def test_write_omim_disease_ttl(tmp_path):
         disease_metadata_util.OBO['HP_0000007'],
     ) in graph
     assert list(graph.objects(disease_without_see_also, disease_metadata_util.RDFS.seeAlso)) == []
+
+def test_write_orphanet_disease_ttl(tmp_path):
+    output_path = tmp_path / 'Orphanet.ttl'
+    mappings = disease_metadata_util.DiseaseMappings(
+        orphanet_to_mondo={
+            '123': '0000001',
+        },
+        orphanet_to_omim={
+            '123': '100100',
+        },
+        orphanet_to_umls={
+            '123': ['C0000001', 'C0000002'],
+        },
+        orphanet_ids=[
+            '123',
+            '456',
+        ],
+    )
+
+    disease_metadata_util.write_orphanet_disease_ttl(
+        output_path=output_path,
+        mappings=mappings,
+        inheritance_map={
+            '100100': ['0000006', '0000007'],
+        },
+        kegg_map={
+            '100100': 'H02129',
+        },
+        gene_reviews_map={
+            '100100': ['NBK1103', 'NBK1104'],
+        },
+    )
+
+    graph = Graph()
+    graph.parse(output_path, format='turtle')
+
+    disease = disease_metadata_util.ORDO['Orphanet_123']
+    assert (disease, RDF.type, disease_metadata_util.MED2RDF.Disease) in graph
+    assert (disease, RDF.type, disease_metadata_util.NCIT.C7057) in graph
+    assert (disease, DCTERMS.identifier, Literal('123')) in graph
+    assert (
+        disease,
+        disease_metadata_util.NANDO.hasInheritance,
+        disease_metadata_util.OBO['HP_0000006'],
+    ) in graph
+    assert (
+        disease,
+        disease_metadata_util.NANDO.hasInheritance,
+        disease_metadata_util.OBO['HP_0000007'],
+    ) in graph
+    assert (
+        disease,
+        disease_metadata_util.RDFS.seeAlso,
+        disease_metadata_util.OBO['MONDO_0000001'],
+    ) in graph
+    assert (
+        disease,
+        disease_metadata_util.RDFS.seeAlso,
+        disease_metadata_util.KEGG['H02129'],
+    ) in graph
+    assert (
+        disease,
+        disease_metadata_util.RDFS.seeAlso,
+        disease_metadata_util.GENEREVIEWS['NBK1103'],
+    ) in graph
+    assert (
+        disease,
+        disease_metadata_util.RDFS.seeAlso,
+        disease_metadata_util.GENEREVIEWS['NBK1104'],
+    ) in graph
+    assert (
+        disease,
+        disease_metadata_util.RDFS.seeAlso,
+        disease_metadata_util.GTR['C0000001'],
+    ) in graph
+    assert (
+        disease,
+        disease_metadata_util.RDFS.seeAlso,
+        disease_metadata_util.GTR['C0000002'],
+    ) in graph
+
+    disease_without_optional_values = disease_metadata_util.ORDO['Orphanet_456']
+    assert (
+        disease_without_optional_values,
+        RDF.type,
+        disease_metadata_util.MED2RDF.Disease,
+    ) in graph
+    assert (
+        disease_without_optional_values,
+        RDF.type,
+        disease_metadata_util.NCIT.C7057,
+    ) in graph
+    assert (
+        disease_without_optional_values,
+        DCTERMS.identifier,
+        Literal('456'),
+    ) in graph
+    assert list(
+        graph.objects(
+            disease_without_optional_values,
+            disease_metadata_util.NANDO.hasInheritance,
+        )
+    ) == []
+    assert list(
+        graph.objects(
+            disease_without_optional_values,
+            disease_metadata_util.RDFS.seeAlso,
+        )
+    ) == []

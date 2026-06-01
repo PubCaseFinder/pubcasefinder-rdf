@@ -27,6 +27,7 @@ NCIT = Namespace("http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#")
 MED2RDF = Namespace("http://med2rdf.org/ontology/")
 MIM = Namespace("https://omim.org/entry/")
 OBO = Namespace("http://purl.obolibrary.org/obo/")
+ORDO = Namespace("http://www.orpha.net/ORDO/")
 
 @dataclass
 class DiseaseMappings:
@@ -360,46 +361,40 @@ def write_orphanet_disease_ttl(
     kegg_map: dict[str, str],
     gene_reviews_map: dict[str, list[str]],
 ) -> None:
+
+    graph = Graph()
+    graph.bind("dcterms", DCTERMS)
+    graph.bind("genereviews", GENEREVIEWS)
+    graph.bind("gtr", GTR)
+    graph.bind("kegg", KEGG)
+    graph.bind("nando", NANDO)
+    graph.bind("ncit", NCIT)
+    graph.bind("med2rdf", MED2RDF)
+    graph.bind("obo", OBO)
+    graph.bind("ordo", ORDO)
+    graph.bind("rdf", RDF)
+    graph.bind("rdfs", RDFS)
+
+    for orphanet_id in mappings.orphanet_ids:
+        omim_id = mappings.orphanet_to_omim.get(orphanet_id)
+        disease = ORDO[f'Orphanet_{orphanet_id}']
+
+        graph.add((disease, RDF.type, MED2RDF.Disease))
+        graph.add((disease, RDF.type, NCIT.C7057))
+        graph.add((disease, DCTERMS.identifier, Literal(orphanet_id)))
+
+        for inheritance_id in inheritance_map.get(omim_id, []):
+            graph.add((disease, NANDO.hasInheritance, OBO[f'HP_{inheritance_id}']))
+        if orphanet_id in mappings.orphanet_to_mondo:
+            graph.add((disease, RDFS.seeAlso, OBO[f'MONDO_{mappings.orphanet_to_mondo[orphanet_id]}']))
+        if omim_id is not None and omim_id in kegg_map:
+            graph.add((disease, RDFS.seeAlso, KEGG[kegg_map[omim_id]]))
+        for gene_review_id in gene_reviews_map.get(omim_id, []):
+            graph.add((disease, RDFS.seeAlso, GENEREVIEWS[gene_review_id]))
+        for uml_id in mappings.orphanet_to_umls.get(orphanet_id, []):
+            graph.add((disease, RDFS.seeAlso, GTR[uml_id]))
     with open_text_writer(output_path) as writer:
-        writer.write("PREFIX dcterms: <http://purl.org/dc/terms/>\n")
-        writer.write("PREFIX genereviews: <https://www.ncbi.nlm.nih.gov/books/>\n")
-        writer.write("PREFIX gtr: <https://www.ncbi.nlm.nih.gov/gtr/all/tests/?term=>\n")
-        writer.write("PREFIX kegg: <http://www.kegg.jp/entry/>\n")
-        writer.write("PREFIX nando: <http://nanbyodata.jp/ontology/nando#>\n")
-        writer.write("PREFIX ncit: <http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#>\n")
-        writer.write("PREFIX med2rdf: <http://med2rdf.org/ontology/>\n")
-        writer.write("PREFIX obo: <http://purl.obolibrary.org/obo/>\n")
-        writer.write("PREFIX ordo: <http://www.orpha.net/ORDO/>\n")
-        writer.write("PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n")
-        writer.write("PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n")
-
-        for orphanet_id in mappings.orphanet_ids:
-            omim_id = mappings.orphanet_to_omim.get(orphanet_id)
-            writer.write(f"ordo:Orphanet_{orphanet_id}\n")
-            writer.write("    a med2rdf:Disease, ncit:C7057 ;\n")
-            writer.write(f'    dcterms:identifier "{orphanet_id}"')
-
-            if omim_id is not None and omim_id in inheritance_map:
-                writer.write(" ;\n")
-                writer.write("    nando:hasInheritance ")
-                _write_values(writer, "obo:HP_", inheritance_map[omim_id])
-            if orphanet_id in mappings.orphanet_to_mondo:
-                writer.write(" ;\n")
-                writer.write(f"    rdfs:seeAlso obo:MONDO_{mappings.orphanet_to_mondo[orphanet_id]}")
-            if omim_id is not None and omim_id in kegg_map:
-                writer.write(" ;\n")
-                writer.write(f"    rdfs:seeAlso kegg:{kegg_map[omim_id]}")
-            if omim_id is not None and omim_id in gene_reviews_map:
-                writer.write(" ;\n")
-                writer.write("    rdfs:seeAlso ")
-                _write_values(writer, "genereviews:", gene_reviews_map[omim_id])
-            if orphanet_id in mappings.orphanet_to_umls:
-                writer.write(" ;\n")
-                writer.write("    rdfs:seeAlso ")
-                _write_values(writer, "gtr:", mappings.orphanet_to_umls[orphanet_id])
-                writer.write(" .\n")
-            else:
-                writer.write(" .\n")
+        writer.write(graph.serialize(format="turtle"))
 
 
 def _write_values(writer, prefix: str, values: list[str], suffix: str = "") -> None:
