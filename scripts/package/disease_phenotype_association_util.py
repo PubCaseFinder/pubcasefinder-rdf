@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 
 import duckdb
 from rdflib import Graph, Literal, Namespace, URIRef, BNode
-from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS, FOAF
+from rdflib.namespace import DCTERMS, RDF, RDFS, FOAF
 
 from package.rdf_build_support import (
     load_config,
