@@ -1,32 +1,45 @@
-# get_data.pyで補うかも
+from __future__ import annotations
 
-import configparser
-from dataclasses import dataclass, field
-from subprocess import PIPE, Popen
-import urllib.request
+from pathlib import Path
 import urllib.error
+import urllib.request
 
+from package.rdf_build_support import load_config
 from utils.log_util import get_logger
 
 logger = get_logger()
 
-@dataclass
-class HomoSapienceGeneHelperConfig(object):
-    data_path: str
-    url: str = field(default='https://ftp.ncbi.nih.gov/gene/DATA/GENE_INFO/Mammalia/Homo_sapiens.gene_info.gz')
 
-def homo_sapience_gene_helper(config: HomoSapienceGeneHelperConfig):
+def download_homo_sapiens_gene_info(url: str, output_path: str | Path) -> Path:
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    logger.info(
+        "downloading NCBI Homo sapiens gene_info: url=%s output=%s",
+        url,
+        output_path,
+    )
+
     try:
-        urllib.request.urlretrieve(config.url, config.data_path)
-    except urllib.error.ContentTooShortError as e:
-        logger.error('ContentTooShortError: %s', e)
+        urllib.request.urlretrieve(url, output_path)
+    except urllib.error.ContentTooShortError:
+        logger.exception("failed to download complete NCBI gene_info file")
+        raise
+    except urllib.error.URLError:
+        logger.exception("failed to download NCBI gene_info file")
+        raise
+
+    logger.info("finished downloading NCBI Homo sapiens gene_info: output=%s", output_path)
+    return output_path
+
+
+def main() -> None:
+    config = load_config("config.ini")
+    download_homo_sapiens_gene_info(
+        config["ncbi_homosapience_gene_data_uri"],
+        config["ncbigene_file_path"],
+    )
 
 
 if __name__ == "__main__":
-    config_ini = configparser.ConfigParser()
-    config_ini.read('config.ini', encoding='utf-8')
-    ncbi_homo_sapience_gene_helper_config = HomoSapienceGeneHelperConfig(
-        config_ini.get('DEFAULT', 'ncbi_homosapience_gene_data_path'),
-        config_ini.get('DEFAULT', 'ncbi_homosapience_gene_data_uri')
-    )
-    homo_sapience_gene_helper(ncbi_homo_sapience_gene_helper_config)
+    main()
