@@ -16,7 +16,7 @@ logger = get_logger()
 def main() -> None:
     # TODO: 変数化したい
     config = load_config('config.ini')
-    records = load_gencc_submission_records(config['gencc_submissions_path'], config['ncbi_gene_info_path'])
+    records = load_gencc_submission_records(config['gencc_submissions_path'], config['ncbigene_file_path'])
     print(f"GenCC submission count : {len(records)}")
 
     write_gencc_gene_association_ttl(

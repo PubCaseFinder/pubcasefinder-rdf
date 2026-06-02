@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from rdflib import URIRef
 
 from utils.log_util import get_logger
@@ -18,7 +20,7 @@ logger = get_logger()
 def main() -> None:
     config = load_config('config.ini')
     mondo_ncbi_gene_map = build_mondo_gene_associations(
-        config['ncbi_gene_info_path'],
+        config['ncbigene_file_path'],
         config['mondo_owl_path'],
         config['gencc_submissions_path'],
         config['medgen_mim2gene_path'],
@@ -32,7 +34,7 @@ def main() -> None:
         "GenCC": URIRef(GENCC_SOURCE_URI),
     }
     write_gene_association_ttl(
-        output_path=config['rdf_output_dir'] / "MONDO_Gene_Association.ttl",
+        output_path=Path(config['rdf_output_dir']) / "MONDO_Gene_Association.ttl",
         associations=mondo_ncbi_gene_map,
         disease_context_prefix="MONDO",
         disease_namespace_prefix="obo",
