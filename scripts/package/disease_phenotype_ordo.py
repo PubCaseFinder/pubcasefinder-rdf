@@ -5,7 +5,7 @@ from pathlib import Path
 from package.rdf_build_support import (
     load_config
 )
-from scripts.package.disease_phenotype_association_util import (
+from package.disease_phenotype_association_util import (
     HPOA_SOURCE_URI,
     create_annotation_source,
     load_manual_phenotype_associations,
@@ -25,7 +25,7 @@ def main() -> None:
     source = create_annotation_source("Orphanet", HPOA_SOURCE_URI)
 
     write_ordo_phenotype_association_ttl(
-        config['rdf_output_dir'] / "Orphanet_HP_Association.ttl",
+        Path(config['rdf_output_dir']) / "Orphanet_HP_Association.ttl",
         orphanet_manual,
         orphanet_frequency,
         source,

@@ -49,6 +49,8 @@ ORDO_FREQUENCY_TO_HPO = {
 
 OA = Namespace('http://www.w3.org/ns/oa#')
 OBO = Namespace("http://purl.obolibrary.org/obo/")
+HOOM = Namespace("http://www.semanticweb.org/ontology/HOOM#")
+ORDO = Namespace("http://www.orpha.net/ORDO/")
 
 
 @dataclass
@@ -145,36 +147,42 @@ def write_ordo_phenotype_association_ttl(
     frequency_by_association: dict[str, str],
     source: AnnotationSource,
 ) -> None:
+    graph = Graph()
+    graph.bind("dcterms", DCTERMS)
+    graph.bind("foaf", FOAF)
+    graph.bind("hoom", HOOM)
+    graph.bind("oa", OA)
+    graph.bind("obo", OBO)
+    graph.bind("ordo", ORDO)
+    graph.bind("rdf", RDF)
+    graph.bind("rdfs", RDFS)
+
+    blank_node_counter = 0
+    for annotation in build_ordo_annotations(manual_associations, frequency_by_association):
+        blank_node_counter += 1
+        source_node = BNode(f"b{blank_node_counter}")
+
+        disease = URIRef(
+            "https://pubcasefinder.dbcls.jp/phenotype_context/"
+            f"disease:ORDO:{annotation.ordo_id}/phenotype:HP:{annotation.hpo_id}"
+        )
+
+        graph.add((disease, RDF.type, OA.Annotation))
+        graph.add((disease, OA.hasTarget, ORDO[f"Orphanet_{annotation.ordo_id}"]))
+        graph.add((disease, OA.hasBody, OBO[f"HP_{annotation.hpo_id}"]))
+        if annotation.frequency_term_id is not None:
+            graph.add((disease, HOOM.with_frequency, OBO[f"HP_{annotation.frequency_term_id}"]))
+        graph.add((disease, DCTERMS.source, source_node))
+        graph.add((disease, OBO["ECO_9000001"], OBO["ECO_0000218"]))
+
+        graph.add((source_node, DCTERMS.creator, Literal(source.creator)))
+        graph.add((source_node, FOAF.page, URIRef(source.page)))
+
+    for label, hpo_id in ORDO_FREQUENCY_TO_HPO.items():
+        graph.add((OBO[f"HP_{hpo_id}"], RDFS.label, Literal(label, lang="en")))
+
     with open_text_writer(output_path) as writer:
-        writer.write("PREFIX dcterms: <http://purl.org/dc/terms/>\n")
-        writer.write("PREFIX foaf: <http://xmlns.com/foaf/0.1>\n")
-        writer.write("PREFIX hoom: <http://www.semanticweb.org/ontology/HOOM#>\n")
-        writer.write("PREFIX oa: <http://www.w3.org/ns/oa#>\n")
-        writer.write("PREFIX obo: <http://purl.obolibrary.org/obo/>\n")
-        writer.write("PREFIX ordo: <http://www.orpha.net/ORDO/>\n")
-        writer.write("PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n")
-        writer.write("PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n")
-
-        blank_node_counter = 0
-        for annotation in build_ordo_annotations(manual_associations, frequency_by_association):
-            blank_node_counter += 1
-            writer.write(
-                "<https://pubcasefinder.dbcls.jp/phenotype_context/"
-                f"disease:ORDO:{annotation.ordo_id}/phenotype:HP:{annotation.hpo_id}>\n"
-            )
-            writer.write("    a oa:Annotation ;\n")
-            writer.write(f"    oa:hasTarget ordo:Orphanet_{annotation.ordo_id} ;\n")
-            writer.write(f"    oa:hasBody obo:HP_{annotation.hpo_id} ;\n")
-            if annotation.frequency_term_id is not None:
-                writer.write(f"    hoom:with_frequency obo:HP_{annotation.frequency_term_id} ;\n")
-            writer.write(f"    dcterms:source _:b{blank_node_counter} ;\n")
-            writer.write("    obo:ECO_9000001 obo:ECO_0000218 .\n")
-
-            writer.write(f"_:b{blank_node_counter}\n")
-            writer.write(f'    dcterms:creator "{source.creator}" ;\n')
-            writer.write(f"    foaf:page <{source.page}> .\n")
-
-        write_frequency_labels(writer)
+        writer.write(graph.serialize(format='turtle'))
 
 
 def write_manual_phenotype_association_ttl(
