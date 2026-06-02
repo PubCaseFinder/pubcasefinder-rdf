@@ -5,6 +5,8 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 import duckdb
+from rdflib import Graph, Literal, Namespace, URIRef, BNode
+from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS, FOAF
 
 from package.rdf_build_support import (
     load_config,
@@ -44,6 +46,9 @@ ORDO_FREQUENCY_TO_HPO = {
     "Very rare (<4-1%)": "0040284",
     "Excluded (0%)": "0040285",
 }
+
+OA = Namespace('http://www.w3.org/ns/oa#')
+OBO = Namespace("http://purl.obolibrary.org/obo/")
 
 
 @dataclass
@@ -176,38 +181,42 @@ def write_manual_phenotype_association_ttl(
     output_path: str | Path,
     disease_namespace_in_path: str,
     disease_resource_prefix: str,
-    disease_prefix_line: str,
+    disease_resource_prefix_uri: str,
     manual_associations: dict[str, str],
     source: AnnotationSource,
 ) -> None:
+
+    disease_namespace = Namespace(disease_resource_prefix_uri)
+
+    graph = Graph()
+    graph.bind("dcterm", DCTERMS)
+    graph.bind("foaf", FOAF)
+    graph.bind(disease_resource_prefix, disease_namespace)
+    graph.bind("oa", OA)
+    graph.bind("obo", OBO)
+    graph.bind("rdf", RDF)
+    graph.bind("rdfs", RDFS)
+
+    blank_node_counter = 0
+    for key in manual_associations:
+        disease_id, hpo_id = key.split("\t")
+        blank_node_counter += 1
+        source_node = BNode(f"b{blank_node_counter}")
+        source_creator = source.creator
+        source_page = source.page
+
+        disease = URIRef(f'https://pubcasefinder.dbcls.jp/phenotype_context/disease:{disease_namespace_in_path}:{disease_id}/phenotype:HP:{hpo_id}')
+
+        graph.add((disease, RDF.type, OA.Annotation))
+        graph.add((disease, OA.hasTarget, disease_namespace[disease_id]))
+        graph.add((disease, OA.hasBody, OBO[f'HP_{hpo_id}']))
+        graph.add((disease, DCTERMS.source, source_node))
+        graph.add((disease, OBO['ECO_9000001'], OBO['ECO_0000218']))
+
+        graph.add((source_node, DCTERMS.creator, Literal(source_creator)))
+        graph.add((source_node, FOAF.page, URIRef(source_page)))
     with open_text_writer(output_path) as writer:
-        writer.write("PREFIX dcterms: <http://purl.org/dc/terms/>\n")
-        writer.write("PREFIX foaf: <http://xmlns.com/foaf/0.1>\n")
-        writer.write(f"{disease_prefix_line}\n")
-        writer.write("PREFIX oa: <http://www.w3.org/ns/oa#>\n")
-        writer.write("PREFIX obo: <http://purl.obolibrary.org/obo/>\n")
-        writer.write("PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n")
-        writer.write("PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n")
-
-        blank_node_counter = 0
-        for key in manual_associations:
-            disease_id, hpo_id = key.split("\t")
-            blank_node_counter += 1
-
-            writer.write(
-                "<https://pubcasefinder.dbcls.jp/phenotype_context/"
-                f"disease:{disease_namespace_in_path}:{disease_id}/phenotype:HP:{hpo_id}>\n"
-            )
-            writer.write("    a oa:Annotation ;\n")
-            writer.write(f"    oa:hasTarget {disease_resource_prefix}{disease_id} ;\n")
-            writer.write(f"    oa:hasBody obo:HP_{hpo_id} ;\n")
-            writer.write(f"    dcterms:source _:b{blank_node_counter} ;\n")
-            writer.write("    obo:ECO_9000001 obo:ECO_0000218 .\n")
-
-            writer.write(f"_:b{blank_node_counter}\n")
-            writer.write(f'    dcterms:creator "{source.creator}" ;\n')
-            writer.write(f"    foaf:page <{source.page}> .\n")
-
+        writer.write(graph.serialize(format='turtle'))
 
 def build_ordo_annotations(
     manual_associations: dict[str, str],

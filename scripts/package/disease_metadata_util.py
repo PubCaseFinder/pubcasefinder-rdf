@@ -11,11 +11,7 @@ from rdflib import Graph, Literal, Namespace, URIRef
 from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS
 
 from package.rdf_build_support import (
-    load_config,
     open_text_writer,
-    resolve_configured_file,
-    resolve_configured_output_dir,
-    resolve_resource_root,
 )
 
 
@@ -395,11 +391,6 @@ def write_orphanet_disease_ttl(
             graph.add((disease, RDFS.seeAlso, GTR[uml_id]))
     with open_text_writer(output_path) as writer:
         writer.write(graph.serialize(format="turtle"))
-
-
-def _write_values(writer, prefix: str, values: list[str], suffix: str = "") -> None:
-    writer.write(", ".join(f"{prefix}{value}{suffix}" for value in values))
-
 
 def _append_unique(values: list[str], value: str) -> None:
     if value not in values:
