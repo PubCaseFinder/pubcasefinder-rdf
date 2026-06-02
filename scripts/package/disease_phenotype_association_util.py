@@ -71,16 +71,16 @@ def load_ordo_frequency_annotations(orphanet_product4_path: str | Path) -> dict[
 
     for disorder_list in root.iter("HPODisorderSetStatusList"):
         for disorder in disorder_list.iter("Disorder"):
-            orpha_code = disorder.find("OrphaCode")
+            orpha_code = disorder.find(".//OrphaCode")
             if orpha_code is None or orpha_code.text is None:
                 continue
 
-            hpo_ids = disorder.findall(".//HPOId")
-            hpo_frequencies = disorder.findall(".//HPOFrequency")
-            for hpo_id_element, hpo_frequency_element in zip(hpo_ids, hpo_frequencies):
-                if hpo_id_element.text is None:
+            for association in disorder.findall(".//HPODisorderAssociation"):
+                hpo_id_element = association.find(".//HPOId")
+                if hpo_id_element is None or hpo_id_element.text is None:
                     continue
 
+                hpo_frequency_element = association.find(".//HPOFrequency")
                 frequency_label = extract_frequency_label(hpo_frequency_element)
                 if frequency_label is None:
                     continue

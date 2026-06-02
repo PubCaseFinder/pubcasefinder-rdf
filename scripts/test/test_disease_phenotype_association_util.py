@@ -16,6 +16,89 @@ OMIM:619340	Developmental and epileptic encephalopathy 96		HP:0032792	PMID:31675
 OMIM:619340	Developmental and epileptic encephalopathy 96		HP:0011451	PMID:31675180	PCS		1/2			P	HPO:probinson[2021-06-21]
 """
 
+product4_content = """\
+<?xml version="1.0" encoding="UTF-8"?>
+<JDBOR>
+  <HPODisorderSetStatusList>
+    <HPODisorderSetStatus>
+      <Disorder>
+        <OrphaCode> 58 </OrphaCode>
+        <HPODisorderAssociationList>
+          <HPODisorderAssociation>
+            <HPO>
+              <HPOId>HP:0000256</HPOId>
+            </HPO>
+            <HPOFrequency>
+              <Name lang="en">Very frequent (99-80%)</Name>
+            </HPOFrequency>
+          </HPODisorderAssociation>
+          <HPODisorderAssociation>
+            <HPO>
+              <HPOId>HP:0000256</HPOId>
+            </HPO>
+            <HPOFrequency>
+              <Name lang="en">Frequent (79-30%)</Name>
+            </HPOFrequency>
+          </HPODisorderAssociation>
+          <HPODisorderAssociation>
+            <HPO>
+              <HPOId> HP:0001249 </HPOId>
+            </HPO>
+            <HPOFrequency>
+              <Name lang="en">Frequent (79-30%)</Name>
+            </HPOFrequency>
+          </HPODisorderAssociation>
+          <HPODisorderAssociation>
+            <HPO>
+              <HPOId>HP:0001250</HPOId>
+            </HPO>
+          </HPODisorderAssociation>
+          <HPODisorderAssociation>
+            <HPO>
+              <HPOId>HP:0001257</HPOId>
+            </HPO>
+            <HPOFrequency/>
+          </HPODisorderAssociation>
+          <HPODisorderAssociation>
+            <HPOFrequency>
+              <Name lang="en">Occasional (29-5%)</Name>
+            </HPOFrequency>
+          </HPODisorderAssociation>
+        </HPODisorderAssociationList>
+      </Disorder>
+      <Disorder>
+        <OrphaCode>166024</OrphaCode>
+        <HPODisorderAssociationList>
+          <HPODisorderAssociation>
+            <HPO>
+              <HPOId>HP:0011097</HPOId>
+            </HPO>
+            <HPOFrequency>
+              <Name lang="en">Occasional (29-5%)</Name>
+            </HPOFrequency>
+          </HPODisorderAssociation>
+        </HPODisorderAssociationList>
+      </Disorder>
+    </HPODisorderSetStatus>
+  </HPODisorderSetStatusList>
+</JDBOR>
+"""
+
+
+def test_load_ordo_frequency_annotations(tmp_path):
+    product4_path = tmp_path / "en_product4.xml"
+    product4_path.write_text(product4_content, encoding="utf-8")
+
+    frequency_map = disease_phenotype_association_util.load_ordo_frequency_annotations(product4_path)
+
+    expect_frequency_map = {
+        "58\t0000256": "Very frequent (99-80%)",
+        "58\t0001249": "Frequent (79-30%)",
+        "166024\t0011097": "Occasional (29-5%)",
+    }
+    assert frequency_map == expect_frequency_map
+
+
 def test_load_manual_phenotype_associations(tmp_path):
     hpoa_path = tmp_path / 'phenotype.hpoa'
     hpoa_path.write_text(hpoa_content, encoding="utf-8")
