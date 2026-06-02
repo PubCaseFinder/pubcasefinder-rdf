@@ -14,13 +14,6 @@ import duckdb
 import chardet
 
 from utils.log_util import get_logger
-from package.rdf_build_support import (
-    load_config,
-    open_text_reader,
-    resolve_configured_file,
-    resolve_configured_output_dir,
-    resolve_resource_root,
-)
 
 logger = get_logger()
 
@@ -36,57 +29,6 @@ NCBIGENE = Namespace("http://identifiers.org/ncbigene/")
 OBO = Namespace("http://purl.obolibrary.org/obo/")
 ORDO = Namespace("http://www.orpha.net/ORDO/")
 SIO = Namespace("http://semanticscience.org/resource/")
-
-CONFIG = load_config('config.ini')
-
-NCBI_GENE_INFO_PATH = resolve_configured_file(
-    CONFIG,
-    "ncbigene.file.path",
-    resolve_resource_root(CONFIG, "ncbigene.dir"),
-    "Homo_sapiens.gene_info.gz",
-    alternate_file_names=("Homo_sapiens.gene_info",),
-)
-MEDGEN_MIM2GENE_PATH = resolve_configured_file(
-    CONFIG,
-    "medgen.mim2gene.path",
-    resolve_resource_root(CONFIG, "medgen.dir"),
-    "mim2gene_medgen.txt",
-)
-ORPHANET_PRODUCT6_PATH = resolve_configured_file(
-    CONFIG,
-    "orphanet.product6.path",
-    resolve_resource_root(CONFIG, "orphanet.dir"),
-    "en_product6.xml",
-)
-MONDO_OWL_PATH = resolve_configured_file(
-    CONFIG,
-    "mondo.owl.path",
-    resolve_resource_root(CONFIG, "mondo.dir"),
-    "mondo-international.owl",
-    alternate_file_names=("mondo.owl", "mondo.obo"),
-)
-GENCC_SUBMISSIONS_PATH = resolve_configured_file(
-    CONFIG,
-    "gencc.submissions.path",
-    resolve_resource_root(CONFIG, "gencc.dir"),
-    "gencc-submissions.tsv",
-    alternate_file_names=("gencc-submissions.csv",),
-)
-NANDO_ASSOCIATION_PATH = resolve_configured_file(
-    CONFIG,
-    "panelsearch.association.path",
-    resolve_resource_root(CONFIG, "panelsearch.dir"),
-    "nando_gene_association.txt",
-    required=False,
-)
-NANDO_MANUAL_PATH = resolve_configured_file(
-    CONFIG,
-    "panelsearch.manual.path",
-    resolve_resource_root(CONFIG, "panelsearch.dir"),
-    "shitei_gene_all_250819.txt",
-    required=False,
-)
-RDF_DIR = resolve_configured_output_dir(CONFIG)
 
 
 AssociationMap = dict[str, list[str]]

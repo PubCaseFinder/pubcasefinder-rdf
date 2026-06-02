@@ -8,26 +8,25 @@ from subprocess import PIPE, Popen
 import tempfile
 
 from utils.log_util import get_logger
+from package.rdf_build_support import load_config
 
 logger = get_logger()
-
-@dataclass
-class NCBIGeneSummaryHelperConfig(object):
-    dataset_path: str
-    dataformat_path: str
-    output_path: str = field(default='data/NCBIGene/latest/gene_summary.tsv')
-
-def ncbi_gene_summary_helper(config: NCBIGeneSummaryHelperConfig):
-    summary_json_path = os.path.splitext(config.output_path)[0] + '.jsonl.gz'
+# TODO: テストコード
+def ncbi_gene_summary_helper(
+        ncbigene_datasets_path: str,
+        ncbigene_dataformat_path: str,
+        ncbigene_summary_path: str
+) -> None:
+    summary_json_path = os.path.splitext(ncbigene_summary_path)[0] + '.jsonl.gz'
     logger.info('start get summary process: output=%s', summary_json_path)
 
     ###### get ncbi dataset ########
     # https://www.ncbi.nlm.nih.gov/datasets/docs/v2/reference-docs/command-line/datasets/summary/gene/
     create_summary = None
     try:
-        logger.info('starting datasets process: %s', config.dataset_path)
+        logger.info('starting datasets process: %s', ncbigene_datasets_path)
         create_summary = Popen([
-            config.dataset_path,
+            ncbigene_datasets_path,
             'summary',
             'gene',
             'taxon',
@@ -66,7 +65,7 @@ def ncbi_gene_summary_helper(config: NCBIGeneSummaryHelperConfig):
             shutil.copyfileobj(rf, temp_jsonl, length=1024 * 1024)
 
         format_gene_summary = Popen([
-            config.dataformat_path,
+            ncbigene_dataformat_path,
             'tsv',
             'gene',
             '--inputfile',
@@ -80,7 +79,7 @@ def ncbi_gene_summary_helper(config: NCBIGeneSummaryHelperConfig):
         logger.info('dataformat process started: pid=%s', format_gene_summary.pid)
 
         try:
-            with gzip.open(config.output_path, mode='wb') as f:
+            with gzip.open(ncbigene_summary_path, mode='wb') as f:
                 if format_gene_summary.stdout:
                     shutil.copyfileobj(format_gene_summary.stdout, f)
 
@@ -95,11 +94,9 @@ def ncbi_gene_summary_helper(config: NCBIGeneSummaryHelperConfig):
                 format_gene_summary.kill()
 
 if __name__ == "__main__":
-    config_ini = configparser.ConfigParser()
-    config_ini.read('config.ini', encoding='utf-8')
-    ncbi_gene_summary_helper_config = NCBIGeneSummaryHelperConfig(
-        config_ini.get('DEFAULT', 'ncbigene_datasets_path'),
-        config_ini.get('DEFAULT', 'ncbigene_dataformat_path'),
-        config_ini.get('DEFAULT', 'ncbigene_summary_path')
+    config = load_config('config.ini')
+    ncbi_gene_summary_helper(
+        config['ncbigene_datasets_path'],
+        config['ncbigene_dataformat_path'],
+        config['ncbigene_summary_path'],
     )
-    ncbi_gene_summary_helper(ncbi_gene_summary_helper_config)

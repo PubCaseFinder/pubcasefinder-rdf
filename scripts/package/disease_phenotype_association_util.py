@@ -9,30 +9,9 @@ from rdflib import Graph, Literal, Namespace, URIRef, BNode
 from rdflib.namespace import DCTERMS, RDF, RDFS, FOAF
 
 from package.rdf_build_support import (
-    load_config,
-    open_text_reader,
     open_text_writer,
-    resolve_configured_file,
-    resolve_configured_output_dir,
-    resolve_resource_root,
 )
 
-
-# CONFIG = load_config()
-
-# ORPHANET_PRODUCT4_PATH = resolve_configured_file(
-#     CONFIG,
-#     "orphanet.product4.path",
-#     resolve_resource_root(CONFIG, "orphanet.dir"),
-#     "en_product4.xml",
-# )
-# HPO_PHENOTYPE_PATH = resolve_configured_file(
-#     CONFIG,
-#     "hpo.phenotype.path",
-#     resolve_resource_root(CONFIG, "hpo.dir"),
-#     "phenotype.hpoa",
-# )
-# RDF_DIR = resolve_configured_output_dir(CONFIG)
 HPOA_SOURCE_URI = (
     "http://compbio.charite.de/jenkins/job/hpo.annotations.current/"
     "lastSuccessfulBuild/artifact/current/phenotype.hpoa"

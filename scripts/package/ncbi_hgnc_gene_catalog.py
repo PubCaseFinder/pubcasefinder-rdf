@@ -3,18 +3,14 @@ from dataclasses import dataclass
 import duckdb
 from rdflib import Graph, Namespace, Literal
 from rdflib.namespace import DCTERMS, RDF, RDFS
+from pathlib import Path
 
 from utils.log_util import get_logger
+from package.rdf_build_support import load_config
 
 logger = get_logger()
 
-@dataclass
-class NCBIHGNCGeneCatalogConfig(object):
-    gene_summary_path: str
-    human_gene_path: str
-    ncbi_hgnc_gene_catalog_path: str
-
-
+# TODO: テスト
 def parse_dbxrefs(xrefs: str) -> dict[str, str] | None:
     if xrefs is None or xrefs == '-':
         return None
@@ -33,19 +29,20 @@ def parse_dbxrefs(xrefs: str) -> dict[str, str] | None:
 
 
 
-def ncbi_hgnc_gene_catalog(config: NCBIHGNCGeneCatalogConfig):
+def ncbi_hgnc_gene_catalog(
+    human_gene_path,
+    gene_summary_path,
+    ncbi_hgnc_gene_catalog_path
+):
     logger.info(
         'start NCBI/HGNC gene catalog RDF build: human_gene=%s summary=%s output=%s',
-        config.human_gene_path,
-        config.gene_summary_path,
-        config.ncbi_hgnc_gene_catalog_path
+        human_gene_path,
+        gene_summary_path,
+        ncbi_hgnc_gene_catalog_path
     )
 
-    # https://duckdb.org/docs/current/configuration/pragmas#memory-limit
-    duckdb.execute('set memory_limit = "2GB"')
-
     con = duckdb.connect('tmp.duckdb')
-    query_statement = f'''
+    query_statement = f"""
         select
             gene_info.GeneID,
             gene_info.Symbol,
@@ -56,10 +53,10 @@ def ncbi_hgnc_gene_catalog(config: NCBIHGNCGeneCatalogConfig):
             type_of_gene,
             nullif(gene_info.Other_designations, '-') as Other_designations,
             nullif(gene_summary."Summary Description", '-') as "Summary Description"
-        from read_csv("{config.human_gene_path}") as gene_info
-        left join read_csv("{config.gene_summary_path}") as gene_summary
+        from read_csv('{human_gene_path}') as gene_info
+        left join read_csv("{gene_summary_path}") as gene_summary
         on gene_info.GeneID = gene_summary."NCBI GeneID"
-    '''
+    """
     logger.info('executing DuckDB query')
     con.execute(query_statement)
     logger.info('DuckDB query started; building RDF graph')
@@ -119,15 +116,9 @@ def ncbi_hgnc_gene_catalog(config: NCBIHGNCGeneCatalogConfig):
             hgnc_id = xref_set['hgnc_id']
             mim_id = xref_set['mim_id']
 
-        # TODO: [debug用]
-        # print(gene_id, symbol, synonyms, map_location)
-        # print('---------------------------')
-
-
         gene = NCBIGENE[str(gene_id)]
 
         if synonyms is not None:
-            # list_synonyms = ', '.join([ f'"{i}"' for i in synonyms.split('|')])
             for s in synonyms.split('|'):
                 g.add((gene, NUC.gene_synonym, Literal(s)))
                 synonym_count += 1
@@ -172,15 +163,14 @@ def ncbi_hgnc_gene_catalog(config: NCBIHGNCGeneCatalogConfig):
         mim_count,
         summary_count
     )
-    logger.info('serializing RDF graph: output=%s', config.ncbi_hgnc_gene_catalog_path)
-    g.serialize(destination=config.ncbi_hgnc_gene_catalog_path, format="turtle", encoding="utf-8")
-    logger.info('finished serializing RDF graph: output=%s triples=%s', config.ncbi_hgnc_gene_catalog_path, len(g))
+    logger.info('serializing RDF graph: output=%s', ncbi_hgnc_gene_catalog_path)
+    g.serialize(destination=ncbi_hgnc_gene_catalog_path, format="turtle", encoding="utf-8")
+    logger.info('finished serializing RDF graph: output=%s triples=%s', ncbi_hgnc_gene_catalog_path, len(g))
 
-
-## TODO: 最終的には削除
-tmp = NCBIHGNCGeneCatalogConfig(
-    '../data/NCBIGene/latest/gene_summary_1.tsv.gz',
-    '../data/NCBIGene/latest/Homo_sapiens.gene_info',
-    '../data/NCBIGene/latest/all_gene_1.ttl'
-)
-ncbi_hgnc_gene_catalog(tmp)
+if __name__ == '__main__':
+    config = load_config('config.ini')
+    ncbi_hgnc_gene_catalog(
+        config['ncbigene_file_path'],
+        config['ncbigene_summary_path'],
+        Path(config['rdf_output_dir']) / 'all_gene.ttl'
+    )
