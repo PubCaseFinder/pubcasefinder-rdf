@@ -13,20 +13,20 @@ from package.rdf_build_support import load_config
 logger = get_logger()
 # TODO: テストコード
 def ncbi_gene_summary_helper(
-        ncbigene_datasets_path: str,
-        ncbigene_dataformat_path: str,
-        ncbigene_summary_path: str
+        ncbi_gene_datasets_path: str,
+        ncbi_gene_dataformat_path: str,
+        ncbi_gene_summary_path: str
 ) -> None:
-    summary_json_path = os.path.splitext(ncbigene_summary_path)[0] + '.jsonl.gz'
+    summary_json_path = os.path.splitext(ncbi_gene_summary_path)[0] + '.jsonl.gz'
     logger.info('start get summary process: output=%s', summary_json_path)
 
     ###### get ncbi dataset ########
     # https://www.ncbi.nlm.nih.gov/datasets/docs/v2/reference-docs/command-line/datasets/summary/gene/
     create_summary = None
     try:
-        logger.info('starting datasets process: %s', ncbigene_datasets_path)
+        logger.info('starting datasets process: %s', ncbi_gene_datasets_path)
         create_summary = Popen([
-            ncbigene_datasets_path,
+            ncbi_gene_datasets_path,
             'summary',
             'gene',
             'taxon',
@@ -65,7 +65,7 @@ def ncbi_gene_summary_helper(
             shutil.copyfileobj(rf, temp_jsonl, length=1024 * 1024)
 
         format_gene_summary = Popen([
-            ncbigene_dataformat_path,
+            ncbi_gene_dataformat_path,
             'tsv',
             'gene',
             '--inputfile',
@@ -79,7 +79,7 @@ def ncbi_gene_summary_helper(
         logger.info('dataformat process started: pid=%s', format_gene_summary.pid)
 
         try:
-            with gzip.open(ncbigene_summary_path, mode='wb') as f:
+            with gzip.open(ncbi_gene_summary_path, mode='wb') as f:
                 if format_gene_summary.stdout:
                     shutil.copyfileobj(format_gene_summary.stdout, f)
 
@@ -96,7 +96,7 @@ def ncbi_gene_summary_helper(
 if __name__ == "__main__":
     config = load_config('config.ini')
     ncbi_gene_summary_helper(
-        config['ncbigene_datasets_path'],
-        config['ncbigene_dataformat_path'],
-        config['ncbigene_summary_path'],
+        config['ncbi_gene_datasets_path'],
+        config['ncbi_gene_dataformat_path'],
+        config['ncbi_gene_summary_path'],
     )

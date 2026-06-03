@@ -41,7 +41,7 @@ def ncbi_hgnc_gene_catalog(
         ncbi_hgnc_gene_catalog_path
     )
 
-    con = duckdb.connect('tmp.duckdb')
+    con = duckdb.connect()
     query_statement = f"""
         select
             gene_info.GeneID,
@@ -53,8 +53,8 @@ def ncbi_hgnc_gene_catalog(
             type_of_gene,
             nullif(gene_info.Other_designations, '-') as Other_designations,
             nullif(gene_summary."Summary Description", '-') as "Summary Description"
-        from read_csv('{human_gene_path}') as gene_info
-        left join read_csv("{gene_summary_path}") as gene_summary
+        from read_csv('{human_gene_path}', delim='\t') as gene_info
+        left join read_csv('{gene_summary_path}', delim='\t') as gene_summary
         on gene_info.GeneID = gene_summary."NCBI GeneID"
     """
     logger.info('executing DuckDB query')
@@ -171,6 +171,6 @@ if __name__ == '__main__':
     config = load_config('config.ini')
     ncbi_hgnc_gene_catalog(
         config['ncbigene_file_path'],
-        config['ncbigene_summary_path'],
+        config['ncbi_gene_summary_path'],
         Path(config['rdf_output_dir']) / 'all_gene.ttl'
     )

@@ -25,7 +25,7 @@ def disease_gene_omim() -> None:
     print(f"OMIM_NCBIGene All Count : {len(omim_ncbi_gene_map)}")
 
     gencc_associations = load_gencc_definitive_associations(
-        config["ncbigene_file_path"],
+        config["ncbi_gene_info_path"],
         config["mondo_owl_path"],
         config["gencc_submissions_path"],
     )

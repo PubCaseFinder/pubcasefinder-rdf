@@ -37,7 +37,7 @@ def homo_sapience_gene_helper() -> None:
     config = load_config("config.ini")
     download_homo_sapiens_gene_info(
         config["ncbi_homosapience_gene_data_uri"],
-        config["ncbigene_file_path"],
+        config["ncbi_gene_info_path"],
     )
 
 

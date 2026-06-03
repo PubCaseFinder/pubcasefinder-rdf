@@ -26,13 +26,13 @@ def disease_gene_ordo() -> None:
     config = load_config('config.ini')
     # TODO:
     orphanet_ncbi_gene_map = load_orphanet_gene_associations(
-        config['ncbigene_file_path'],
+        config['ncbi_gene_info_path'],
         config['orphanet_product6_path'],
     )
     print(f"Orphanet NCBI Count : {len(orphanet_ncbi_gene_map)}")
 
     gencc_associations = load_gencc_definitive_associations(
-        config['ncbigene_file_path'],
+        config['ncbi_gene_info_path'],
         config['mondo_owl_path'],
         config['gencc_submissions_path'],
     )

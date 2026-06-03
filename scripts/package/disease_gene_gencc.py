@@ -15,7 +15,7 @@ logger = get_logger()
 
 def disease_gene_gencc() -> None:
     config = load_config('config.ini')
-    records = load_gencc_submission_records(config['gencc_submissions_path'], config['ncbigene_file_path'])
+    records = load_gencc_submission_records(config['gencc_submissions_path'], config['ncbi_gene_info_path'])
     print(f"GenCC submission count : {len(records)}")
 
     write_gencc_gene_association_ttl(

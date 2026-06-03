@@ -370,10 +370,8 @@ def project_gene_to_mapped_diseases(
 
 def merge_association_maps(target: AssociationMap, source: AssociationMap) -> None:
     for key, source_names in source.items():
-        print('key: ', key)
         disease_id, gene_id = key.split("\t")
         for source_name in source_names:
-            print('source: ', source_name)
             add_association(target, disease_id, gene_id, source_name)
 
 
@@ -409,19 +407,6 @@ def merge_associations_from_tsv(
             stats.overlap += 1
     return stats
 
-    # for line_number, line in enumerate(check_file(path), start=1):
-    #     if skip_first_line and line_number == 1:
-    #         continue
-
-    #     split = line.rstrip("\n").split("\t")
-    #     if len(split) > max(disease_index, gene_index):
-    #         if add_association(associations, split[disease_index], split[gene_index], source):
-    #             stats.added += 1
-    #         else:
-    #             stats.overlap += 1
-
-    # return stats
-
 # utf-8でファイルを開こうとする
 # もし開けない場合はcp949でファイルを開き、そのファイルの横にutf-8エンコードしたファイルを吐き出させる
 # それでも開けない場合はerrorを返して処理を中断
@@ -430,12 +415,10 @@ def check_file_char_code(path: str | Path) -> str | Path:
     if Path(path).suffix == '.gz':
         with gzip.open(path, 'rb') as f:
             char_code = chardet.detect(f.read(), include_encodings=['utf-8','cp949'])
-        print('文字列コード:', char_code['encoding'])
         return create_utf8_file(path, char_code['encoding'])
     else:
         with open(path, 'rb') as f:
             char_code = chardet.detect(f.read(), include_encodings=['utf-8','cp949'])
-        print('文字列コード:', char_code['encoding'])
         return create_utf8_file(path, char_code['encoding'])
 
 def create_utf8_file(path: str | Path, char_code: str):

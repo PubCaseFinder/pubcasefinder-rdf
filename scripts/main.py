@@ -27,19 +27,13 @@ CONFIG_PATH = SCRIPT_DIR / "config.ini"
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build PubCaseFinder RDF files.")
-    parser.add_argument(
-        "--update-ncbi-summary",
-        action="store_true",
-        help="Run NCBIGeneSummaryHelper before building RDF, even when the summary cache exists.",
-    )
+
     parser.add_argument(
         "--skip-ncbi-summary",
         action="store_true",
         help="Skip NCBIGeneSummaryHelper even when the summary cache is missing.",
     )
     args = parser.parse_args(argv)
-    if args.update_ncbi_summary and args.skip_ncbi_summary:
-        parser.error("--update-ncbi-summary and --skip-ncbi-summary cannot be used together")
     return args
 
 
@@ -58,23 +52,14 @@ def should_run_ncbi_gene_summary(config: dict[str, str], args: argparse.Namespac
         logger.info("skip NCBIGeneSummaryHelper: --skip-ncbi-summary was specified")
         return False
 
-    if args.update_ncbi_summary:
-        return True
-
-    summary_path = Path(config["ncbigene_summary_path"])
-    if summary_path.exists():
-        logger.info("skip NCBIGeneSummaryHelper: summary cache already exists: %s", summary_path)
-        return False
-
-    logger.info("run NCBIGeneSummaryHelper: summary cache is missing: %s", summary_path)
     return True
 
 
 def run_ncbi_gene_summary_helper(config: dict[str, str]) -> None:
     required_keys = [
-        "ncbigene_datasets_path",
-        "ncbigene_dataformat_path",
-        "ncbigene_summary_path",
+        "ncbi_gene_datasets_path",
+        "ncbi_gene_dataformat_path",
+        "ncbi_gene_summary_path",
     ]
     missing_keys = [key for key in required_keys if not config.get(key)]
     if missing_keys:
@@ -84,16 +69,16 @@ def run_ncbi_gene_summary_helper(config: dict[str, str]) -> None:
         )
 
     ncbi_gene_summary_helper.ncbi_gene_summary_helper(
-        config["ncbigene_datasets_path"],
-        config["ncbigene_dataformat_path"],
-        config["ncbigene_summary_path"],
+        config["ncbi_gene_datasets_path"],
+        config["ncbi_gene_dataformat_path"],
+        config["ncbi_gene_summary_path"],
     )
 
 
 def run_ncbi_hgnc_gene_catalog(config: dict[str, str]) -> None:
     ncbi_hgnc_gene_catalog.ncbi_hgnc_gene_catalog(
-        config["ncbigene_file_path"],
-        config["ncbigene_summary_path"],
+        config["ncbi_gene_info_path"],
+        config["ncbi_gene_summary_path"],
         Path(config["rdf_output_dir"]) / "all_gene.ttl",
     )
 
