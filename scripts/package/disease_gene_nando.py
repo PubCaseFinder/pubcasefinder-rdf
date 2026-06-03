@@ -16,7 +16,7 @@ from package.disease_gene_association_util import (
 
 logger = get_logger()
 
-def main() -> None:
+def disease_gene_nando() -> None:
     config = load_config('config.ini')
     nando_ncbi_gene_map: dict[str, list[str]] = {}
 
@@ -57,4 +57,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    disease_gene_nando()

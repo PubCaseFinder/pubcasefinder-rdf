@@ -110,16 +110,16 @@ def main(argv: Sequence[str] | None = None) -> None:
     steps.extend(
         [
             ("NCBIHGNCGeneCatalog", lambda: run_ncbi_hgnc_gene_catalog(config)),
-            ("DiseaseMetadataOMIM", disease_metadata_omim.main),
-            ("DiseaseMetadataORDO", disease_metadata_ordo.main),
-            ("DiseasePhenotypeOMIM", disease_phenotype_omim.main),
-            ("DiseasePhenotypeORDO", disease_phenotype_ordo.main),
-            ("DiseaseGeneOMIM", disease_gene_omim.main),
-            ("DiseaseGeneORDO", disease_gene_ordo.main),
-            ("DiseaseGeneMONDO", disease_gene_mondo.main),
-            ("DiseaseGeneNANDO", disease_gene_nando.main),
-            ("DiseaseGeneGenCC", disease_gene_gencc.main),
-            ("HP_ja", hp_ja.main),
+            ("DiseaseMetadataOMIM", disease_metadata_omim.disease_metadata_omim),
+            ("DiseaseMetadataORDO", disease_metadata_ordo.disease_metadata_ordo),
+            ("DiseasePhenotypeOMIM", disease_phenotype_omim.disease_phenotype_omim),
+            ("DiseasePhenotypeORDO", disease_phenotype_ordo.disease_phenotype_ordo),
+            ("DiseaseGeneOMIM", disease_gene_omim.disease_gene_omim),
+            ("DiseaseGeneORDO", disease_gene_ordo.disease_gene_ordo),
+            ("DiseaseGeneMONDO", disease_gene_mondo.disease_gene_mondo),
+            ("DiseaseGeneNANDO", disease_gene_nando.disease_gene_nando),
+            ("DiseaseGeneGenCC", disease_gene_gencc.disease_gene_gencc),
+            ("HP_ja", hp_ja.hp_ja),
         ]
     )
 

@@ -14,7 +14,7 @@ from package.disease_phenotype_association_util import (
 )
 
 
-def main() -> None:
+def disease_phenotype_ordo() -> None:
     config = load_config('config.ini')
     orphanet_frequency = load_ordo_frequency_annotations(config['orphanet_product4_path'])
     print(f"Orphanet_frequency Count : {len(orphanet_frequency)}")
@@ -34,4 +34,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    disease_phenotype_ordo()

@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import re
 from pathlib import Path
-import csv
 import xml.etree.ElementTree as ET
 import sys
 import gzip

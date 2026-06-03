@@ -17,7 +17,7 @@ from package.disease_gene_association_util import (
 
 logger = get_logger()
 
-def main() -> None:
+def disease_gene_mondo() -> None:
     config = load_config('config.ini')
     mondo_ncbi_gene_map = build_mondo_gene_associations(
         config['ncbigene_file_path'],
@@ -45,4 +45,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    disease_gene_mondo()

@@ -13,7 +13,7 @@ from package.disease_phenotype_association_util import (
 )
 
 
-def main() -> None:
+def disease_phenotype_omim() -> None:
     config = load_config('config.ini')
     omim_manual = load_manual_phenotype_associations(config['hpo_phenotype_path'], "OMIM")
     print(f"OMIM_HPO_Manual Count : {len(omim_manual)}")
@@ -35,4 +35,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    disease_phenotype_omim()

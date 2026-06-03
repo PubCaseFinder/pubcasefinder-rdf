@@ -8,7 +8,7 @@ from package.rdf_build_support import (
 from package.disease_metadata_util import load_shared_reference_data, write_orphanet_disease_ttl
 
 
-def main() -> None:
+def disease_metadata_ordo() -> None:
     config = load_config('config.ini')
     print(f"finish load config")
     reference_data = load_shared_reference_data(
@@ -34,4 +34,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    disease_metadata_ordo()

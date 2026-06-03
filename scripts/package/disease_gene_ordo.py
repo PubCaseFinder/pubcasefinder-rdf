@@ -22,7 +22,7 @@ from package.disease_gene_association_util import (
 
 logger = get_logger()
 
-def main() -> None:
+def disease_gene_ordo() -> None:
     config = load_config('config.ini')
     # TODO:
     orphanet_ncbi_gene_map = load_orphanet_gene_associations(
@@ -56,4 +56,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    disease_gene_ordo()

@@ -12,7 +12,7 @@ from package.rdf_build_support import load_config, open_text_writer
 
 OBO = Namespace("http://purl.obolibrary.org/obo/")
 
-def main() -> None:
+def hp_ja() -> None:
     config = load_config('config.ini')
 
     labels, inheritance_count, official_count = load_hpo_japanese_labels(
@@ -103,4 +103,4 @@ def write_hpo_japanese_ttl(output_path: str | Path, labels: dict[str, str]) -> N
         writer.write(graph.serialize(format='turtle'))
 
 if __name__ == "__main__":
-    main()
+    hp_ja()

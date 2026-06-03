@@ -12,7 +12,7 @@ from package.disease_metadata_util import (
 )
 
 
-def main() -> None:
+def disease_metadata_omim() -> None:
     config = load_config('config.ini')
     omim_ids = load_omim_disease_ids(config['omim_mim2gene_data_uri'])
     print(f"OMIM All Count : {len(omim_ids)}")
@@ -50,4 +50,4 @@ def append_unique(values: list[str], additions) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    disease_metadata_omim()

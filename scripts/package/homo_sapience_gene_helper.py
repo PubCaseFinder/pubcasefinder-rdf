@@ -33,7 +33,7 @@ def download_homo_sapiens_gene_info(url: str, output_path: str | Path) -> Path:
     return output_path
 
 
-def main() -> None:
+def homo_sapience_gene_helper() -> None:
     config = load_config("config.ini")
     download_homo_sapiens_gene_info(
         config["ncbi_homosapience_gene_data_uri"],
@@ -42,4 +42,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    homo_sapience_gene_helper()

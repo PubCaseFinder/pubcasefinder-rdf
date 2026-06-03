@@ -13,8 +13,7 @@ from package.disease_gene_association_util import (
 
 logger = get_logger()
 
-def main() -> None:
-    # TODO: 変数化したい
+def disease_gene_gencc() -> None:
     config = load_config('config.ini')
     records = load_gencc_submission_records(config['gencc_submissions_path'], config['ncbigene_file_path'])
     print(f"GenCC submission count : {len(records)}")
@@ -26,4 +25,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    disease_gene_gencc()
