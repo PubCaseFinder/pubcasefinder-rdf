@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 from pathlib import Path
 import urllib.error
 import urllib.request
@@ -35,10 +36,13 @@ def download_homo_sapiens_gene_info(url: str, output_path: str | Path) -> Path:
 
 def homo_sapience_gene_helper() -> None:
     config = load_config("config.ini")
-    download_homo_sapiens_gene_info(
-        config["ncbi_homosapience_gene_data_uri"],
-        config["ncbi_gene_info_path"],
-    )
+    try:
+        download_homo_sapiens_gene_info(
+            config["ncbi_homosapience_gene_data_uri"],
+            config["ncbi_gene_info_path"],
+        )
+    finally:
+        gc.collect()
 
 
 if __name__ == "__main__":

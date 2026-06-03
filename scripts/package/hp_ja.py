@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 from pathlib import Path
 import re
 
@@ -14,17 +15,23 @@ OBO = Namespace("http://purl.obolibrary.org/obo/")
 
 def hp_ja() -> None:
     config = load_config('config.ini')
+    labels = None
 
-    labels, inheritance_count, official_count = load_hpo_japanese_labels(
-        config["hpo_inheritance_ja_path"],
-        config["hpo_japanese_path"],
-    )
-    output_path = Path(config["rdf_output_dir"]) / "HPO_ja.ttl"
-    write_hpo_japanese_ttl(output_path, labels)
+    try:
+        labels, inheritance_count, official_count = load_hpo_japanese_labels(
+            config["hpo_inheritance_ja_path"],
+            config["hpo_japanese_path"],
+        )
+        output_path = Path(config["rdf_output_dir"]) / "HPO_ja.ttl"
+        write_hpo_japanese_ttl(output_path, labels)
 
-    print(f"Inheritance labels loaded: {inheritance_count}")
-    print(f"Official labels loaded: {official_count}")
-    print(f"Unique labels written: {len(labels)}")
+        print(f"Inheritance labels loaded: {inheritance_count}")
+        print(f"Official labels loaded: {official_count}")
+        print(f"Unique labels written: {len(labels)}")
+    finally:
+        if labels is not None:
+            labels.clear()
+        gc.collect()
 
 
 def load_hpo_japanese_labels(

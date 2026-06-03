@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 from pathlib import Path
 
 from rdflib import URIRef
@@ -24,35 +25,46 @@ logger = get_logger()
 
 def disease_gene_ordo() -> None:
     config = load_config('config.ini')
+    orphanet_ncbi_gene_map = None
+    gencc_associations = None
+
     # TODO:
-    orphanet_ncbi_gene_map = load_orphanet_gene_associations(
-        config['ncbi_gene_info_path'],
-        config['orphanet_product6_path'],
-    )
-    print(f"Orphanet NCBI Count : {len(orphanet_ncbi_gene_map)}")
+    try:
+        orphanet_ncbi_gene_map = load_orphanet_gene_associations(
+            config['ncbi_gene_info_path'],
+            config['orphanet_product6_path'],
+        )
+        print(f"Orphanet NCBI Count : {len(orphanet_ncbi_gene_map)}")
 
-    gencc_associations = load_gencc_definitive_associations(
-        config['ncbi_gene_info_path'],
-        config['mondo_owl_path'],
-        config['gencc_submissions_path'],
-    )
-    before_merge = len(orphanet_ncbi_gene_map)
-    merge_association_maps(orphanet_ncbi_gene_map, gencc_associations.orphanet_associations)
-    print(f"GenCC_ncbigene_orpha Count : {len(orphanet_ncbi_gene_map) - before_merge}")
+        gencc_associations = load_gencc_definitive_associations(
+            config['ncbi_gene_info_path'],
+            config['mondo_owl_path'],
+            config['gencc_submissions_path'],
+        )
+        before_merge = len(orphanet_ncbi_gene_map)
+        merge_association_maps(orphanet_ncbi_gene_map, gencc_associations.orphanet_associations)
+        print(f"GenCC_ncbigene_orpha Count : {len(orphanet_ncbi_gene_map) - before_merge}")
+        gencc_associations = None
+        gc.collect()
 
-    source_uri_map = {
-        "Orphanet": URIRef("http://www.orphadata.org/data/xml/en_product6.xml"),
-        "GenCC": URIRef(GENCC_SOURCE_URI),
-    }
-    write_gene_association_ttl(
-        output_path=Path(config['rdf_output_dir']) / "Orphanet_Gene_Association.ttl",
-        associations=orphanet_ncbi_gene_map,
-        disease_context_prefix="ORDO",
-        disease_namespace_prefix="ordo",
-        disease_namespace=ORDO,
-        disease_id_prefix="Orphanet_",
-        source_uri_map=source_uri_map,
-    )
+        source_uri_map = {
+            "Orphanet": URIRef("http://www.orphadata.org/data/xml/en_product6.xml"),
+            "GenCC": URIRef(GENCC_SOURCE_URI),
+        }
+        write_gene_association_ttl(
+            output_path=Path(config['rdf_output_dir']) / "Orphanet_Gene_Association.ttl",
+            associations=orphanet_ncbi_gene_map,
+            disease_context_prefix="ORDO",
+            disease_namespace_prefix="ordo",
+            disease_namespace=ORDO,
+            disease_id_prefix="Orphanet_",
+            source_uri_map=source_uri_map,
+        )
+    finally:
+        gencc_associations = None
+        if orphanet_ncbi_gene_map is not None:
+            orphanet_ncbi_gene_map.clear()
+        gc.collect()
 
 
 if __name__ == "__main__":

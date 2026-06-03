@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+import gc
 import duckdb
 from rdflib import Graph, Namespace, Literal
 from rdflib.namespace import DCTERMS, RDF, RDFS
@@ -166,6 +167,9 @@ def ncbi_hgnc_gene_catalog(
     logger.info('serializing RDF graph: output=%s', ncbi_hgnc_gene_catalog_path)
     g.serialize(destination=ncbi_hgnc_gene_catalog_path, format="turtle", encoding="utf-8")
     logger.info('finished serializing RDF graph: output=%s triples=%s', ncbi_hgnc_gene_catalog_path, len(g))
+    con.close()
+    g = None
+    gc.collect()
 
 if __name__ == '__main__':
     config = load_config('config.ini')

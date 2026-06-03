@@ -1,5 +1,6 @@
 
 import configparser
+import gc
 from dataclasses import dataclass, field
 import gzip
 import os
@@ -92,6 +93,7 @@ def ncbi_gene_summary_helper(
             if format_gene_summary is not None and format_gene_summary.poll() is None:
                 logger.warning('killing unfinished dataformats process: pid=%s', format_gene_summary.pid)
                 format_gene_summary.kill()
+    gc.collect()
 
 if __name__ == "__main__":
     config = load_config('config.ini')

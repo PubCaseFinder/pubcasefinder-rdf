@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 from pathlib import Path
 
 from rdflib import URIRef
@@ -19,29 +20,36 @@ logger = get_logger()
 
 def disease_gene_mondo() -> None:
     config = load_config('config.ini')
-    mondo_ncbi_gene_map = build_mondo_gene_associations(
-        config['ncbi_gene_info_path'],
-        config['mondo_owl_path'],
-        config['gencc_submissions_path'],
-        config['medgen_mim2gene_path'],
-        config['orphanet_product6_path']
-    )
-    print(f"MONDO_Gene_Association Count : {len(mondo_ncbi_gene_map)}")
+    mondo_ncbi_gene_map = None
 
-    source_uri_map = {
-        "MedGen": URIRef("ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/mim2gene_medgen"),
-        "Orphanet": URIRef("http://www.orphadata.org/data/xml/en_product6.xml"),
-        "GenCC": URIRef(GENCC_SOURCE_URI),
-    }
-    write_gene_association_ttl(
-        output_path=Path(config['rdf_output_dir']) / "MONDO_Gene_Association.ttl",
-        associations=mondo_ncbi_gene_map,
-        disease_context_prefix="MONDO",
-        disease_namespace_prefix="obo",
-        disease_namespace=OBO,
-        disease_id_prefix="MONDO_",
-        source_uri_map=source_uri_map,
-    )
+    try:
+        mondo_ncbi_gene_map = build_mondo_gene_associations(
+            config['ncbi_gene_info_path'],
+            config['mondo_owl_path'],
+            config['gencc_submissions_path'],
+            config['medgen_mim2gene_path'],
+            config['orphanet_product6_path']
+        )
+        print(f"MONDO_Gene_Association Count : {len(mondo_ncbi_gene_map)}")
+
+        source_uri_map = {
+            "MedGen": URIRef("ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/mim2gene_medgen"),
+            "Orphanet": URIRef("http://www.orphadata.org/data/xml/en_product6.xml"),
+            "GenCC": URIRef(GENCC_SOURCE_URI),
+        }
+        write_gene_association_ttl(
+            output_path=Path(config['rdf_output_dir']) / "MONDO_Gene_Association.ttl",
+            associations=mondo_ncbi_gene_map,
+            disease_context_prefix="MONDO",
+            disease_namespace_prefix="obo",
+            disease_namespace=OBO,
+            disease_id_prefix="MONDO_",
+            source_uri_map=source_uri_map,
+        )
+    finally:
+        if mondo_ncbi_gene_map is not None:
+            mondo_ncbi_gene_map.clear()
+        gc.collect()
 
 
 if __name__ == "__main__":
