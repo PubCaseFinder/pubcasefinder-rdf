@@ -4,6 +4,7 @@ scripts/.venv
 scripts/archives
 scripts/java
 scripts/test
+*.exe
 
 
 virtuoso_data

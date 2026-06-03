@@ -1,10 +1,13 @@
 services:
   rdf_create_tools:
     container_name: rdf_create_tools
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     volumes:
       - ${DATA_SOURCE_DIRECTORY:-data/source}:/data/source
       - ${RDF_DATA_DIRECTORY:-./data/rdf}:/data/rdf
+      - ./scripts/config.ini:/app/config.ini
   test-virtuoso:
     container_name: test-virtuoso
     image: openlink/virtuoso-opensource-7:7.2.12

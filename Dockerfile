@@ -7,13 +7,14 @@ ENV VIRTUAL_ENV=/app/.venv
 RUN uv venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
+WORKDIR /app
+
 # パッケージのインストール
 COPY ./scripts/pyproject.toml ./scripts/uv.lock .
 RUN uv pip install --no-cache -r pyproject.toml
 
-COPY ./scripts /app/scripts
+COPY ./scripts /app/
 
-WORKDIR /app
 
 # 仮想環境の有効化
 ENV PATH="/app/.venv/bin:$PATH"
