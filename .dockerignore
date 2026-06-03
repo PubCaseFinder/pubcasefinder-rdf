@@ -1,6 +1,9 @@
 scripts/__pycache__
+scripts/.pytest_cache
+scripts/.venv
 scripts/archives
 scripts/java
+scripts/test
 
 
 virtuoso_data

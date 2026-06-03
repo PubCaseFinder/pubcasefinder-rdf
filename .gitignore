@@ -2,3 +2,4 @@ __pycache__
 .venv
 config.ini
 .env
+.pytest_cache
