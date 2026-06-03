@@ -27,25 +27,18 @@ def test_parse_dbxrefs():
 def test_ncbi_hgnc_gene_catalog(tmp_path, mocker):
     human_gene_path = tmp_path / "Homo_sapiens.gene_info"
     human_gene_path.write_text(
-        "GeneID,Symbol,Synonyms,dbXrefs,map_location,description,type_of_gene,Other_designations\n"
-        "1,A1BG,A1B|ABG,MIM:138670|HGNC:HGNC:5,19q13.43,alpha-1-B glycoprotein,protein-coding,alpha-1B-glycoprotein\n"
-        "2,A2M,-,-,-,alpha-2-macroglobulin,protein-coding,-\n",
+        "GeneID\tSymbol\tSynonyms\tdbXrefs\tmap_location\tdescription\ttype_of_gene\tOther_designations\n"
+        "1\tA1BG\tA1B|ABG\tMIM:138670|HGNC:HGNC:5\t19q13.43\talpha-1-B glycoprotein\tprotein-coding\talpha-1B-glycoprotein\n"
+        "2\tA2M\t-\t-\t-\talpha-2-macroglobulin\tprotein-coding\t-\n",
         encoding="utf-8",
     )
     gene_summary_path = tmp_path / "gene_summary.tsv"
     gene_summary_path.write_text(
-        '"NCBI GeneID","Summary Description"\n'
-        "1,A1BG summary\n",
+        "NCBI GeneID\tSummary Description\n"
+        "1\tA1BG summary\n",
         encoding="utf-8",
     )
     output_path = tmp_path / "all_gene.ttl"
-
-    duckdb_connect = duckdb.connect
-    mocker.patch.object(
-        ncbi_hgnc_gene_catalog.duckdb,
-        "connect",
-        lambda _path: duckdb_connect(":memory:"),
-    )
 
     ncbi_hgnc_gene_catalog.ncbi_hgnc_gene_catalog(
         human_gene_path,
