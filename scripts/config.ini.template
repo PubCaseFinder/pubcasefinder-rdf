@@ -1,45 +1,32 @@
-# Optional overrides for local resource locations.
-# Leave values empty to auto-discover the newest dated folder under each resource root.
-
-# Full file path overrides take precedence when provided.
 [Override]
-ncbigene_file_path=
-ncbigene_summary_path=
-ncbigene_datasets_path=
-ncbigene_dataformat_path=
+
+ncbi_gene_info_path=
+ncbi_gene_summary_path=
+ncbi_gene_datasets_path=
+ncbi_gene_dataformat_path=
 ncbi_homosapience_gene_data_uri=
-ncbi_homosapience_gene_data_path=
+
 omim_mim2gene_data_uri=
-omim_mim2gene_path=
+
 medgen_mim2gene_path=
 medgen_omim_hpo_path=
+
 orphanet_product4_path=
 orphanet_product6_path=
+
 mondo_owl_path=
+
 gencc_submissions_path=
+
 panelsearch_association_path=
 panelsearch_manual_path=
+
 hpo_phenotype_path=
 hpo_inheritance_ja_path=
 hpo_japanese_path=
+
 kegg_disease_path=
+
 genereviews_omim_path=
 
-# Resource roots_ The loader checks:
-# 1_ <dir>/<filename>
-# 2_ <dir>/latest/<filename>
-# 3_ the newest child directory under <dir>/<filename>
-ncbigene_dir=
-medgen_dir=
-orphanet_dir=
-mondo_dir=
-gencc_dir=
-panelsearch_dir=
-omim_dir=
-kegg_dir=
-genereviews_dir=
-hpo_dir=
-
-# Output directory for generated TTL files_
 rdf_output_dir=
-
