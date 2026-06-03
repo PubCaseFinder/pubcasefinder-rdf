@@ -23,8 +23,11 @@ def load_config(config_path: str | Path | None = None) -> dict[str, str]:
         return {}
 
     default_config = {
-        'ncbigene_file_path': '../data/source/NCBIGene/latest/Homo_sapiens.gene_info',
-        'ncbigene_summary_path': '../data/source/NCBIGene/latest/gene_summary.tsv',
+        'ncbi_gene_info_path': '../data/source/NCBIGene/latest/Homo_sapiens.gene_info.gz',
+        'ncbi_gene_summary_path': '../data/source/NCBIGene/latest/gene_summary.tsv.gz',
+        'ncbi_gene_datasets_path': './tools/ncbi/datasets.exe',
+        'ncbi_gene_dataformat_path': './tools/ncbi/dataformat.exe',
+        'ncbi_homosapience_gene_data_uri': 'https://ftp.ncbi.nlm.nih.gov/gene/DATA/GENE_INFO/Mammalia/Homo_sapiens.gene_info.gz',
         'omim_mim2gene_data_uri': '../data/source/OMIM/latest/mim2gene.txt',
         'medgen_mim2gene_path': '../data/source/MedGen/latest/mim2gene_medgen.txt',
         'medgen_omim_hpo_path': '../data/source/MedGen/latest/MedGen_HPO_OMIM_Mapping.txt.gz',
@@ -39,17 +42,7 @@ def load_config(config_path: str | Path | None = None) -> dict[str, str]:
         'hpo_japanese_path': '../data/source/HPO/latest/HPO-japanese.alpha.21Jul2023.tsv',
         'kegg_disease_path': '../data/source/KEGG/latest/KEGG_disease.tsv',
         'genereviews_omim_path': '../data/source/GeneReviews/latest/NBKid_shortname_OMIM.txt',
-        'ncbigene_dir': '../data/source/NCBIGene/latest',
-        'medgen_dir': '../data/source/MedGen/latest',
-        'orphanet_dir': '../data/source/Orphanet/latest',
-        'mondo_dir': '../data/source/MONDO/latest',
-        'gencc_dir': '../data/source/GenCC/latest',
-        'panelsearch_dir': '../data/source/PanelSearch/latest',
-        'omim_dir': '../data/source/OMIM/latest',
-        'kegg_dir': '../data/source/KEGG/latest',
-        'genereviews_dir': '../data/source/GeneReviews/latest',
-        'hpo_dir': '../data/source/HPO/latest',
-        'rdf_output_dir': '../data/rdf',
+        'rdf_output_dir': '../data/rdf_ini',
     }
 
     parser = configparser.ConfigParser(default_config)

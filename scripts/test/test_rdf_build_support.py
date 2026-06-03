@@ -36,14 +36,12 @@ def test_load_config(tmp_path):
     config_path = tmp_path / "config.ini"
     config_content = f"""
     [Override]
-    ncbigene_file_path={source_root}/NCBIGene/latest/Homo_sapiens.gene_info
-    ncbigene_summary_path={source_root}/NCBIGene/latest/gene_summary.tsv
-    # ncbigene_datasets_path={source_root}/NCBIGene/latest/
-    # ncbigene_dataformat_path={source_root}/NCBIGene/latest/
-    # ncbi_homosapience_gene_data_uri={source_root}/NCBIGene/latest/
-    # ncbi_homosapience_gene_data_path={source_root}/NCBIGene/latest/
+    ncbi_gene_info_path={source_root}/NCBIGene/latest/Homo_sapiens.gene_info.gz
+    ncbi_gene_summary_path={source_root}/NCBIGene/latest/gene_summary.tsv.gz
+    ncbi_gene_datasets_path=./tools/ncbi/datasets.exe
+    ncbi_gene_dataformat_path=./tools/ncbi/dataformat.exe
+    ncbi_homosapience_gene_data_uri=https://ftp.ncbi.nlm.nih.gov/gene/DATA/GENE_INFO/Mammalia/Homo_sapiens.gene_info.gz
     omim_mim2gene_data_uri={source_root}/OMIM/latest/mim2gene.txt
-    # omim_mim2gene_path={source_root}/OMIM/
     medgen_mim2gene_path={source_root}/MedGen/latest/mim2gene_medgen.txt
     medgen_omim_hpo_path={source_root}/MedGen/latest/MedGen_HPO_OMIM_Mapping.txt.gz
     orphanet_product4_path={source_root}/Orphanet/latest/en_product4.xml
@@ -57,16 +55,6 @@ def test_load_config(tmp_path):
     hpo_japanese_path={source_root}/HPO/latest/HPO-japanese.alpha.21Jul2023.tsv
     kegg_disease_path={source_root}/KEGG/latest/KEGG_disease.tsv
     genereviews_omim_path={source_root}/GeneReviews/latest/NBKid_shortname_OMIM.txt
-    ncbigene_dir={source_root}/NCBIGene/latest
-    medgen_dir={source_root}/MedGen/latest
-    orphanet_dir={source_root}/Orphanet/latest
-    mondo_dir={source_root}/MONDO/latest
-    gencc_dir={source_root}/GenCC/latest
-    panelsearch_dir={source_root}/PanelSearch/latest
-    omim_dir={source_root}/OMIM/latest
-    kegg_dir={source_root}/KEGG/latest
-    genereviews_dir={source_root}/GeneReviews/latest
-    hpo_dir={source_root}/HPO/latest
 
     rdf_output_dir={rdf_output_dir}
     """
