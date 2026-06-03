@@ -269,6 +269,68 @@ def test_load_gencc_submission_records(mocker, tmp_path):
 
     assert records == expect_records
 
+def test_load_orphanet_gene_associations(mocker, tmp_path):
+    ncbi_gene_path = (tmp_path / 'Homo_sapiens.gene_info').as_posix()
+    orphanet_xml_path = (tmp_path / 'en_product6.xml').as_posix()
+    create_mock_file(orphanet_xml_path, orphanet_product6_content)
+    mocker.patch.object(disease_gene_association_util, 'load_ncbi_gene_symbol_map', mock_load_ncbi_gene_symbol_map)
+
+    associations = disease_gene_association_util.load_orphanet_gene_associations(
+        ncbi_gene_path,
+        orphanet_xml_path
+    )
+    expect_associations = {
+        '166024\t10': ['Orphanet']
+    }
+
+    assert associations == expect_associations
+
+def test_load_omim_gene_associations(tmp_path):
+    mim2gen__medgen_path = (tmp_path / 'mim2gene_medgen.txt').as_posix()
+    create_mock_file(mim2gen__medgen_path, mim2gen__medgen_content)
+    associations = disease_gene_association_util.load_omim_gene_associations(mim2gen__medgen_path)
+    expect_associations = {
+        '100100\t1131': ['MedGen'],
+        '100300\t57514': ['MedGen'],
+    }
+    assert associations == expect_associations
+
+def test_load_gencc_definitive_associations(mocker):
+    expect_associations = disease_gene_association_util.GenCCAssociations(
+        mondo_associations={
+            '0008426\t1': ['GenCC'],
+        }
+    )
+
+    def mock_load_gencc_associations(
+        ncbigene_gene_info_path,
+        mondo_owl_path,
+        gencc_submissions_path,
+        allowed_classification_curies,
+        *,
+        project_mondo_to_mapped_diseases,
+    ):
+        assert ncbigene_gene_info_path == 'gene_info'
+        assert mondo_owl_path == 'mondo.owl'
+        assert gencc_submissions_path == 'gencc.tsv'
+        assert allowed_classification_curies == {'GENCC:100001'}
+        assert project_mondo_to_mapped_diseases is True
+        return expect_associations
+
+    mocker.patch.object(
+        disease_gene_association_util,
+        'load_gencc_associations',
+        mock_load_gencc_associations
+    )
+
+    associations = disease_gene_association_util.load_gencc_definitive_associations(
+        'gene_info',
+        'mondo.owl',
+        'gencc.tsv'
+    )
+
+    assert associations == expect_associations
+
 def test_load_gencc_associations(mocker, tmp_path):
     ncbigene_gene_info_path = (tmp_path / 'Homo_sapiens.gene_info').as_posix()
     mondo_owl_path = (tmp_path / 'mondo-international.owl').as_posix()
@@ -298,32 +360,6 @@ def test_load_gencc_associations(mocker, tmp_path):
     assert associations.mondo_associations == {
         '0008426\t1': ['GenCC'],
     }
-
-def test_load_orphanet_gene_associations(mocker, tmp_path):
-    ncbi_gene_path = (tmp_path / 'Homo_sapiens.gene_info').as_posix()
-    orphanet_xml_path = (tmp_path / 'en_product6.xml').as_posix()
-    create_mock_file(orphanet_xml_path, orphanet_product6_content)
-    mocker.patch.object(disease_gene_association_util, 'load_ncbi_gene_symbol_map', mock_load_ncbi_gene_symbol_map)
-
-    associations = disease_gene_association_util.load_orphanet_gene_associations(
-        ncbi_gene_path,
-        orphanet_xml_path
-    )
-    expect_associations = {
-        '166024\t10': ['Orphanet']
-    }
-
-    assert associations == expect_associations
-
-def test_load_omim_gene_associations(tmp_path):
-    mim2gen__medgen_path = (tmp_path / 'mim2gene_medgen.txt').as_posix()
-    create_mock_file(mim2gen__medgen_path, mim2gen__medgen_content)
-    associations = disease_gene_association_util.load_omim_gene_associations(mim2gen__medgen_path)
-    expect_associations = {
-        '100100\t1131': ['MedGen'],
-        '100300\t57514': ['MedGen'],
-    }
-    assert associations == expect_associations
 
 def test_add_original_disease_association():
     associations = disease_gene_association_util.GenCCAssociations()
@@ -379,29 +415,33 @@ def test_load_mondo_mapping_from_owl(tmp_path):
         '2462': ['0008426'],
     }
 
-def test_add_projected_mondo_associations(tmp_path):
-    mondo_ncbi_gene_map: disease_gene_association_util.AssociationMap = {}
-        # omim_to_mondo = {
-        #     '182212': ['0008426'],
-        #     '171300': ['0008233'],
-        # },
-    omim_ncbi_gene_map = {
-        '182212\t1': ['MedGen'],
-        '171300\t2': ['MedGen'],
+def test_project_gene_to_mapped_diseases():
+    associations = {
+        '182212\t1': ['GenCC'],
     }
-    mondo_mappping = mock_load_mondo_mapping_from_owl(tmp_path)
-    disease_gene_association_util.add_projected_mondo_associations(
-        mondo_ncbi_gene_map,
-        omim_ncbi_gene_map,
-        mondo_mappping.omim_to_mondo,
+    mondo_mapping = {
+        '0008426': ['182212', '182213'],
+    }
+
+    disease_gene_association_util.project_gene_to_mapped_diseases(
+        associations,
+        mondo_mapping,
+        '0008426',
+        '1',
+        'MedGen'
+    )
+    disease_gene_association_util.project_gene_to_mapped_diseases(
+        associations,
+        mondo_mapping,
+        '0000000',
+        '2',
+        'MedGen'
     )
 
-    expect_mondo_ncbi_gene_map = {
-        '0008426\t1': ['MedGen'],
-        '0008233\t2': ['MedGen']
+    assert associations == {
+        '182212\t1': ['GenCC', 'MedGen'],
+        '182213\t1': ['MedGen'],
     }
-
-    assert mondo_ncbi_gene_map == expect_mondo_ncbi_gene_map
 
 def test_merge_association_maps():
     mock_source_map = disease_gene_association_util.AssociationMap({
@@ -478,6 +518,42 @@ def test_check_file_char_code(tmp_path):
         if result is not None:
             with open(result) as f:
                 assert f.readline() == '今日の芸術'
+
+def test_create_utf8_file(tmp_path):
+    utf8_path = tmp_path / 'utf8.txt'
+    utf8_path.write_text('hello', encoding='utf-8')
+
+    assert disease_gene_association_util.create_utf8_file(utf8_path, 'utf-8') == utf8_path
+
+    cp949_path = tmp_path / 'cp949.txt'
+    cp949_path.write_text('hello', encoding='cp949')
+
+    result = disease_gene_association_util.create_utf8_file(cp949_path, 'CP949')
+
+    assert Path(result).name == 'cp949_utf8.txt'
+    assert Path(result).read_text(encoding='utf-8') == 'hello'
+    assert disease_gene_association_util.create_utf8_file(cp949_path, None) is None
+
+def test_add_projected_mondo_associations():
+    mondo_ncbi_gene_map: disease_gene_association_util.AssociationMap = {}
+    omim_ncbi_gene_map = {
+        '182212\t1': ['MedGen'],
+        '171300\t2': ['MedGen'],
+    }
+    mondo_mappping = mock_load_mondo_mapping_from_owl(None)
+
+    disease_gene_association_util.add_projected_mondo_associations(
+        mondo_ncbi_gene_map,
+        omim_ncbi_gene_map,
+        mondo_mappping.omim_to_mondo,
+    )
+
+    expect_mondo_ncbi_gene_map = {
+        '0008426\t1': ['MedGen'],
+        '0008233\t2': ['MedGen']
+    }
+
+    assert mondo_ncbi_gene_map == expect_mondo_ncbi_gene_map
 
 def test_build_mondo_gene_associations(mocker, tmp_path):
 
@@ -691,10 +767,78 @@ where {
 
         assert value in expect_rdf_map[key]
 
+def test_extract_hgnc_id():
+    assert disease_gene_association_util.extract_hgnc_id(
+        'MIM:138670|HGNC:HGNC:5|Ensembl:ENSG00000121410'
+    ) == '5'
+    assert disease_gene_association_util.extract_hgnc_id('HGNC:7') == '7'
+    assert disease_gene_association_util.extract_hgnc_id(None) is None
+    assert disease_gene_association_util.extract_hgnc_id('MIM:138670') is None
+
+def test_normalize_value():
+    assert disease_gene_association_util.normalize_value(' "MONDO:0008426" ') == 'MONDO:0008426'
+    assert disease_gene_association_util.normalize_value('OMIM:182212') == 'OMIM:182212'
+    assert disease_gene_association_util.normalize_value(None) is None
+
+def test_normalize_curie_value():
+    assert disease_gene_association_util.normalize_curie_value(' "HGNC:5" ', 'HGNC:') == '5'
+    assert disease_gene_association_util.normalize_curie_value('OMIM:182212', 'HGNC:') == 'OMIM:182212'
+    assert disease_gene_association_util.normalize_curie_value(None, 'HGNC:') == ''
+
+def test_resolve_gencc_submitter_label():
+    assert disease_gene_association_util.resolve_gencc_submitter_label('GENCC:000101') == 'Ambry Genetics'
+    assert disease_gene_association_util.resolve_gencc_submitter_label('GENCC:999999') == 'GENCC:999999'
+    assert disease_gene_association_util.resolve_gencc_submitter_label(None) == ''
+
+def test_to_gencc_disease_reference():
+    assert disease_gene_association_util.to_gencc_disease_reference('OMIM:182212') == (
+        'OMIM:182212',
+        disease_gene_association_util.MIM['182212'],
+    )
+    assert disease_gene_association_util.to_gencc_disease_reference('Orphanet:2462') == (
+        'ORDO:2462',
+        disease_gene_association_util.ORDO['Orphanet_2462'],
+    )
+    assert disease_gene_association_util.to_gencc_disease_reference('MONDO:0008426') == (
+        'MONDO:0008426',
+        disease_gene_association_util.OBO['MONDO_0008426'],
+    )
+    assert disease_gene_association_util.to_gencc_disease_reference(None) is None
+    assert disease_gene_association_util.to_gencc_disease_reference('HGNC:5') is None
+
+def test_to_hpo_uri():
+    assert disease_gene_association_util.to_hpo_uri('HP:0000006') == disease_gene_association_util.OBO['HP_0000006']
+    assert disease_gene_association_util.to_hpo_uri('') is None
+
+def test_add_to_mapping():
+    mapping = {
+        '0008426': ['182212'],
+    }
+
+    disease_gene_association_util.add_to_mapping(mapping, '0008426', '182212')
+    disease_gene_association_util.add_to_mapping(mapping, '0008426', '171300')
+    disease_gene_association_util.add_to_mapping(mapping, '0008233', '171300')
+
+    assert mapping == {
+        '0008426': ['182212', '171300'],
+        '0008233': ['171300'],
+    }
+
 def test_extract_mondo_id_from_uri():
     mock_uri = '    <!-- http://purl.obolibrary.org/obo/MONDO_8000034 -->'
     result = disease_gene_association_util.extract_mondo_id_from_uri(mock_uri)
     assert result == '8000034'
+
+def test_is_deprecated_resource():
+    graph = Graph()
+    deprecated_uri = URIRef('http://purl.obolibrary.org/obo/MONDO_9999999')
+    active_uri = URIRef('http://purl.obolibrary.org/obo/MONDO_0008426')
+
+    graph.add((deprecated_uri, disease_gene_association_util.OWL.deprecated, Literal(True)))
+    graph.add((active_uri, disease_gene_association_util.OWL.deprecated, Literal(False)))
+
+    assert disease_gene_association_util.is_deprecated_resource(graph, deprecated_uri) is True
+    assert disease_gene_association_util.is_deprecated_resource(graph, active_uri) is False
 
 def test_extract_omim_id():
     mock_uri = '<skos:exactMatch rdf:resource="https://omim.org/entry/607948"/>'
