@@ -13,6 +13,7 @@ def dotted_to_snake(key: str) -> str:
 
 # config pathを与えてconfigを読み取りディクショナリで返す
 def load_config(config_path: str | Path | None = None) -> dict[str, str]:
+    logger.info("loading config: path=%s", config_path)
     path = Path(config_path)
     if path is None:
         logger.error('Missing required config path')
@@ -49,12 +50,14 @@ def load_config(config_path: str | Path | None = None) -> dict[str, str]:
     parser.read(path, encoding='utf-8')
     config = dict(parser['Override'])
 
+    logger.info("loaded config: path=%s entries=%s", path, len(config))
     return config
 
 def open_text_writer(path: str | Path) -> TextIO:
     path = Path(path)
     if path.parent:
         path.parent.mkdir(parents=True, exist_ok=True)
+    logger.info("opening text writer: path=%s", path)
     if path.suffix == ".gz":
         return gzip.open(path, "wt", encoding="utf-8", newline="\n")
     return path.open("wt", encoding="utf-8", newline="\n")

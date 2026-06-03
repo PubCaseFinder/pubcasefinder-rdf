@@ -84,6 +84,7 @@ GENCC_SUBMITTER_LABELS = {
 
 
 def load_ncbi_gene_symbol_map(path: str | Path) -> dict[str, str]:
+    logger.info("loading NCBI gene symbol map: path=%s", path)
     ncbi_gene_symbol_map: dict[str, str] = {}
     con = duckdb.connect()
     query_statement = f"""
@@ -99,10 +100,12 @@ def load_ncbi_gene_symbol_map(path: str | Path) -> dict[str, str]:
             break
         if row[1] not in ncbi_gene_symbol_map:
             ncbi_gene_symbol_map[row[1]] = row[0]
+    logger.info("loaded NCBI gene symbol map: path=%s symbols=%s", path, len(ncbi_gene_symbol_map))
     return ncbi_gene_symbol_map
 
 # ncbiのHomo_sapience.gene_infoからhgncid: dxrefをマッピング
 def load_hgnc_to_ncbi_map(path: str | Path) -> dict[str, str]:
+    logger.info("loading HGNC to NCBI map: path=%s", path)
     hgnc_to_ncbi_map: dict[str, str] = {}
     con = duckdb.connect()
     query_statement = f"select cast(GeneID as varchar), dbXrefs from read_csv('{path}', delim='\\t')"
@@ -118,6 +121,7 @@ def load_hgnc_to_ncbi_map(path: str | Path) -> dict[str, str]:
         if hgnc_id is not None and hgnc_id not in hgnc_to_ncbi_map:
             hgnc_to_ncbi_map[hgnc_id] = row[0]
 
+    logger.info("loaded HGNC to NCBI map: path=%s mappings=%s", path, len(hgnc_to_ncbi_map))
     return hgnc_to_ncbi_map
 
 # gencc-submissions.tsvとhgncidのdxrefを紐づけ
@@ -125,6 +129,11 @@ def load_gencc_submission_records(
     gencc_submissions_path: str,
     ncbi_gene_info_path: str,
 ) -> list[GenCCSubmissionRecord]:
+    logger.info(
+        "loading GenCC submission records: submissions=%s ncbi_gene_info=%s",
+        gencc_submissions_path,
+        ncbi_gene_info_path,
+    )
     hgnc_to_ncbi_map = load_hgnc_to_ncbi_map(ncbi_gene_info_path)
     records: list[GenCCSubmissionRecord] = []
 
@@ -173,12 +182,18 @@ def load_gencc_submission_records(
                 submitter_label=resolve_gencc_submitter_label(submitter_id),
             )
         )
+    logger.info("loaded GenCC submission records: submissions=%s records=%s", gencc_submissions_path, len(records))
     return records
 
 def load_orphanet_gene_associations(
     ncbi_gene_path: str | Path,
     orphanet_xml_path: str | Path,
 ) -> AssociationMap:
+    logger.info(
+        "loading Orphanet gene associations: ncbi_gene=%s orphanet_xml=%s",
+        ncbi_gene_path,
+        orphanet_xml_path,
+    )
     ncbi_gene_symbol_map = load_ncbi_gene_symbol_map(ncbi_gene_path)
     associations: AssociationMap = {}
 
@@ -197,9 +212,11 @@ def load_orphanet_gene_associations(
                 if ncbi_id is not None:
                     add_association(associations, orpha_number.text, ncbi_id, "Orphanet")
 
+    logger.info("loaded Orphanet gene associations: orphanet_xml=%s associations=%s", orphanet_xml_path, len(associations))
     return associations
 
 def load_omim_gene_associations(path: str | Path) -> AssociationMap:
+    logger.info("loading OMIM gene associations: path=%s", path)
     associations: AssociationMap = {}
     con = duckdb.connect()
     query_statement = f"""
@@ -219,6 +236,7 @@ def load_omim_gene_associations(path: str | Path) -> AssociationMap:
             break
         add_association(associations, row[0], row[1], "MedGen")
 
+    logger.info("loaded OMIM gene associations: path=%s associations=%s", path, len(associations))
     return associations
 
 def load_gencc_definitive_associations(
@@ -226,6 +244,7 @@ def load_gencc_definitive_associations(
     mondo_owl_path: str,
     gencc_submissions_path: str,
 ) -> GenCCAssociations:
+    logger.info("loading definitive GenCC associations")
     # 遺伝子と疾患の関係性が確実なもののみを取り扱う
     return load_gencc_associations(
         ncbigene_gene_info_path,
@@ -243,6 +262,13 @@ def load_gencc_associations(
     *,
     project_mondo_to_mapped_diseases: bool,
 ) -> GenCCAssociations:
+    logger.info(
+        "loading GenCC associations: ncbi_gene_info=%s mondo_owl=%s submissions=%s project_mondo=%s",
+        ncbigene_gene_info_path,
+        mondo_owl_path,
+        gencc_submissions_path,
+        project_mondo_to_mapped_diseases,
+    )
     hgnc_to_ncbi_map = load_hgnc_to_ncbi_map(ncbigene_gene_info_path)
     mondo_mapping = load_mondo_mapping_from_owl(mondo_owl_path)
     associations = GenCCAssociations()
@@ -299,6 +325,12 @@ def load_gencc_associations(
                     "GenCC",
                 )
 
+    logger.info(
+        "loaded GenCC associations: omim=%s orphanet=%s mondo=%s",
+        len(associations.omim_associations),
+        len(associations.orphanet_associations),
+        len(associations.mondo_associations),
+    )
     return associations
 
 def add_original_disease_association(
@@ -329,6 +361,7 @@ def add_original_disease_association(
         )
 
 def load_mondo_mapping_from_owl(mondo_owl_path: str | Path) -> MondoMapping:
+    logger.info("loading MONDO mapping from OWL: path=%s", mondo_owl_path)
     mapping = MondoMapping()
     graph = Graph()
     graph.parse(str(mondo_owl_path), format="xml")
@@ -352,6 +385,14 @@ def load_mondo_mapping_from_owl(mondo_owl_path: str | Path) -> MondoMapping:
             add_to_mapping(mapping.mondo_to_orpha, mondo_id, orpha_id)
             add_to_mapping(mapping.orpha_to_mondo, orpha_id, mondo_id)
 
+    logger.info(
+        "loaded MONDO mapping from OWL: path=%s mondo_to_omim=%s mondo_to_orpha=%s omim_to_mondo=%s orpha_to_mondo=%s",
+        mondo_owl_path,
+        len(mapping.mondo_to_omim),
+        len(mapping.mondo_to_orpha),
+        len(mapping.omim_to_mondo),
+        len(mapping.orpha_to_mondo),
+    )
     return mapping
 
 def project_gene_to_mapped_diseases(
@@ -369,10 +410,24 @@ def project_gene_to_mapped_diseases(
         add_association(target_associations, mapped_id, ncbi_id, source)
 
 def merge_association_maps(target: AssociationMap, source: AssociationMap) -> None:
+    before_count = len(target)
+    added_count = 0
+    overlap_count = 0
     for key, source_names in source.items():
         disease_id, gene_id = key.split("\t")
         for source_name in source_names:
-            add_association(target, disease_id, gene_id, source_name)
+            if add_association(target, disease_id, gene_id, source_name):
+                added_count += 1
+            else:
+                overlap_count += 1
+    logger.info(
+        "merged association maps: source_associations=%s before=%s after=%s added=%s overlap=%s",
+        len(source),
+        before_count,
+        len(target),
+        added_count,
+        overlap_count,
+    )
 
 
 def merge_associations_from_tsv(
@@ -382,7 +437,15 @@ def merge_associations_from_tsv(
     gene_column: int,
     source: str,
     ) -> MergeStats:
+    logger.info(
+        "merging associations from TSV: path=%s source=%s disease_column=%s gene_column=%s",
+        path,
+        source,
+        disease_column,
+        gene_column,
+    )
     stats = MergeStats()
+    original_path = path
     path = check_file_char_code(path)
     if not path:
         sys.exit(1)
@@ -405,12 +468,22 @@ def merge_associations_from_tsv(
             stats.added += 1
         else:
             stats.overlap += 1
+    logger.info(
+        "merged associations from TSV: path=%s normalized_path=%s source=%s added=%s overlap=%s total_associations=%s",
+        original_path,
+        path,
+        source,
+        stats.added,
+        stats.overlap,
+        len(associations),
+    )
     return stats
 
 # utf-8でファイルを開こうとする
 # もし開けない場合はcp949でファイルを開き、そのファイルの横にutf-8エンコードしたファイルを吐き出させる
 # それでも開けない場合はerrorを返して処理を中断
 def check_file_char_code(path: str | Path) -> str | Path:
+    logger.info("checking file character code: path=%s", path)
     char_code = ''
     if Path(path).suffix == '.gz':
         with gzip.open(path, 'rb') as f:
@@ -422,6 +495,7 @@ def check_file_char_code(path: str | Path) -> str | Path:
         return create_utf8_file(path, char_code['encoding'])
 
 def create_utf8_file(path: str | Path, char_code: str):
+    logger.info("detected file character code: path=%s encoding=%s", path, char_code)
     match char_code:
         case 'utf-8':
             return path
@@ -436,6 +510,7 @@ def create_utf8_file(path: str | Path, char_code: str):
             with open(utf8_file_path, 'w', encoding='utf-8') as writer:
                 writer.write(reader.read())
             reader.close()
+            logger.info("created UTF-8 encoded file: source=%s output=%s", path, utf8_file_path)
             return utf8_file_path
         case None:
             logger.error(f'check the file character code: {path}')
@@ -446,6 +521,8 @@ def add_projected_mondo_associations(
     source_associations: AssociationMap,
     mondo_mapping: dict[str, list[str]],
 ) -> None:
+    before_count = len(mondo_associations)
+    added_count = 0
     for key, sources in source_associations.items():
         disease_id, ncbi_id = key.split("\t")
         mondo_ids = mondo_mapping.get(disease_id)
@@ -454,7 +531,16 @@ def add_projected_mondo_associations(
 
         for mondo_id in mondo_ids:
             for source in sources:
-                add_association(mondo_associations, mondo_id, ncbi_id, source)
+                if add_association(mondo_associations, mondo_id, ncbi_id, source):
+                    added_count += 1
+    logger.info(
+        "added projected MONDO associations: source_associations=%s mappings=%s before=%s after=%s added=%s",
+        len(source_associations),
+        len(mondo_mapping),
+        before_count,
+        len(mondo_associations),
+        added_count,
+    )
 
 def build_mondo_gene_associations(
     ncbigene_gene_info_path: str,
@@ -463,6 +549,7 @@ def build_mondo_gene_associations(
     medgen_mim2gene_path: str,
     orphanet_product6_path: str,
 ) -> AssociationMap:
+    logger.info("building MONDO gene associations")
     gencc_associations = load_gencc_definitive_associations(
         ncbigene_gene_info_path,
         mondo_owl_path,
@@ -484,6 +571,7 @@ def build_mondo_gene_associations(
         mondo_mapping.orpha_to_mondo,
     )
     merge_association_maps(mondo_ncbi_gene_map, gencc_associations.mondo_associations)
+    logger.info("built MONDO gene associations: associations=%s", len(mondo_ncbi_gene_map))
     return mondo_ncbi_gene_map
 
 # 第一引数で受け取ったmapにdisease_id\tgene_id: [sources]を入れる関数
@@ -510,6 +598,12 @@ def write_gene_association_ttl(
     disease_id_prefix: str,
     source_uri_map: dict[str, URIRef],
 ) -> None:
+    logger.info(
+        "writing gene association TTL: output=%s associations=%s disease_context=%s",
+        output_path,
+        len(associations),
+        disease_context_prefix,
+    )
     graph = Graph()
     graph.bind("dcterms", DCTERMS)
     graph.bind("ncbigene", NCBIGENE)
@@ -539,11 +633,13 @@ def write_gene_association_ttl(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     graph.serialize(destination=str(output_path), format="turtle", encoding="utf-8")
+    logger.info("finished writing gene association TTL: output=%s triples=%s", output_path, len(graph))
 
 def write_gencc_gene_association_ttl(
     output_path: str | Path,
     records: list[GenCCSubmissionRecord],
 ) -> None:
+    logger.info("writing GenCC gene association TTL: output=%s records=%s", output_path, len(records))
     graph = Graph()
     graph.bind("dcterms", DCTERMS)
     graph.bind("gencc", GENCC)
@@ -569,6 +665,7 @@ def write_gencc_gene_association_ttl(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     graph.serialize(destination=str(output_path), format="turtle", encoding="utf-8")
+    logger.info("finished writing GenCC gene association TTL: output=%s triples=%s", output_path, len(graph))
 
 
 def extract_hgnc_id(db_xrefs: str | None) -> str | None:

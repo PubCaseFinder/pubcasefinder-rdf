@@ -8,9 +8,12 @@ import duckdb
 from rdflib import Graph, Literal, Namespace, URIRef, BNode
 from rdflib.namespace import DCTERMS, RDF, RDFS, FOAF
 
+from utils.log_util import get_logger
 from package.rdf_build_support import (
     open_text_writer,
 )
+
+logger = get_logger()
 
 HPOA_SOURCE_URI = (
     "http://compbio.charite.de/jenkins/job/hpo.annotations.current/"
@@ -46,6 +49,7 @@ class OrdoPhenotypeAnnotation:
 
 
 def load_ordo_frequency_annotations(orphanet_product4_path: str | Path) -> dict[str, str]:
+    logger.info("loading Orphanet frequency annotations: path=%s", orphanet_product4_path)
     frequencies: dict[str, str] = {}
     tree = ET.parse(orphanet_product4_path)
     root = tree.getroot()
@@ -69,6 +73,7 @@ def load_ordo_frequency_annotations(orphanet_product4_path: str | Path) -> dict[
                 key = f"{orpha_code.text.strip()}\t{normalize_hpo_id(hpo_id_element.text)}"
                 frequencies.setdefault(key, frequency_label)
 
+    logger.info("loaded Orphanet frequency annotations: path=%s annotations=%s", orphanet_product4_path, len(frequencies))
     return frequencies
 
 
@@ -76,6 +81,11 @@ def load_manual_phenotype_associations(
     phenotype_hpoa_path: str | Path,
     disease_prefix: str,
 ) -> dict[str, str]:
+    logger.info(
+        "loading manual phenotype associations: path=%s disease_prefix=%s",
+        phenotype_hpoa_path,
+        disease_prefix,
+    )
     manual_associations: dict[str, str] = {}
     prefix = f"{disease_prefix}:"
 
@@ -100,6 +110,12 @@ def load_manual_phenotype_associations(
         key = f"{disease_id}\t{hpo_id}"
         manual_associations.setdefault(key, "Manual")
 
+    logger.info(
+        "loaded manual phenotype associations: path=%s disease_prefix=%s associations=%s",
+        phenotype_hpoa_path,
+        disease_prefix,
+        len(manual_associations),
+    )
     return manual_associations
 
 def extract_frequency_label(hpo_frequency_element: ET.Element | None) -> str | None:
@@ -117,6 +133,7 @@ def normalize_hpo_id(value: str) -> str:
 
 
 def create_annotation_source(creator: str, page: str) -> AnnotationSource:
+    logger.info("creating annotation source: creator=%s page=%s", creator, page)
     return AnnotationSource(creator=creator, page=page)
 
 
@@ -126,6 +143,12 @@ def write_ordo_phenotype_association_ttl(
     frequency_by_association: dict[str, str],
     source: AnnotationSource,
 ) -> None:
+    logger.info(
+        "writing Orphanet phenotype association TTL: output=%s manual_associations=%s frequencies=%s",
+        output_path,
+        len(manual_associations),
+        len(frequency_by_association),
+    )
     graph = Graph()
     graph.bind("dcterms", DCTERMS)
     graph.bind("foaf", FOAF)
@@ -162,6 +185,7 @@ def write_ordo_phenotype_association_ttl(
 
     with open_text_writer(output_path) as writer:
         writer.write(graph.serialize(format='turtle'))
+    logger.info("finished writing Orphanet phenotype association TTL: output=%s triples=%s", output_path, len(graph))
 
 
 def write_manual_phenotype_association_ttl(
@@ -173,6 +197,12 @@ def write_manual_phenotype_association_ttl(
     source: AnnotationSource,
 ) -> None:
 
+    logger.info(
+        "writing manual phenotype association TTL: output=%s disease_namespace=%s associations=%s",
+        output_path,
+        disease_namespace_in_path,
+        len(manual_associations),
+    )
     disease_namespace = Namespace(disease_resource_prefix_uri)
 
     graph = Graph()
@@ -204,11 +234,17 @@ def write_manual_phenotype_association_ttl(
         graph.add((source_node, FOAF.page, URIRef(source_page)))
     with open_text_writer(output_path) as writer:
         writer.write(graph.serialize(format='turtle'))
+    logger.info("finished writing manual phenotype association TTL: output=%s triples=%s", output_path, len(graph))
 
 def build_ordo_annotations(
     manual_associations: dict[str, str],
     frequency_by_association: dict[str, str],
 ) -> list[OrdoPhenotypeAnnotation]:
+    logger.info(
+        "building Orphanet phenotype annotations: manual_associations=%s frequencies=%s",
+        len(manual_associations),
+        len(frequency_by_association),
+    )
     annotations: list[OrdoPhenotypeAnnotation] = []
     for key in manual_associations:
         ordo_id, hpo_id = key.split("\t")
@@ -220,10 +256,13 @@ def build_ordo_annotations(
                 frequency_term_id=ORDO_FREQUENCY_TO_HPO.get(frequency_label),
             )
         )
+    logger.info("built Orphanet phenotype annotations: annotations=%s", len(annotations))
     return annotations
 
 
 def write_frequency_labels(writer) -> None:
+    logger.info("writing Orphanet frequency labels: labels=%s", len(ORDO_FREQUENCY_TO_HPO))
     for label, hpo_id in ORDO_FREQUENCY_TO_HPO.items():
         writer.write(f"obo:HP_{hpo_id}\n")
         writer.write(f'    rdfs:label "{label}"@en .\n')
+    logger.info("finished writing Orphanet frequency labels")

@@ -18,6 +18,7 @@ from package.disease_gene_association_util import (
 logger = get_logger()
 
 def disease_gene_nando() -> None:
+    logger.info("start NANDO gene association RDF build")
     config = load_config('config.ini')
     nando_ncbi_gene_map: dict[str, list[str]] = {}
 
@@ -29,7 +30,7 @@ def disease_gene_nando() -> None:
             'GeneID',
             "PanelSearch",
         )
-        print(f"NANDO_NCBIGene PanelSearch Count : {panel_search_stats.added}")
+        logger.info("NANDO PanelSearch associations added: %s", panel_search_stats.added)
 
         nanbyou_stats = merge_associations_from_tsv(
             config['panelsearch_manual_path'],
@@ -38,8 +39,8 @@ def disease_gene_nando() -> None:
             'NCBI',
             "Nanbyou"
         )
-        print(f"NANDO_NCBIGene Nanbyou Count : {nanbyou_stats.added}")
-        print(f"NANDO_NCBIGene Overlap : {nanbyou_stats.overlap}")
+        logger.info("NANDO Nanbyou associations added: %s", nanbyou_stats.added)
+        logger.info("NANDO Nanbyou association overlap: %s", nanbyou_stats.overlap)
 
         source_uri_map = {
             "PanelSearch": URIRef(
@@ -47,8 +48,9 @@ def disease_gene_nando() -> None:
             ),
             "Nanbyou": URIRef("https://www.nanbyou.or.jp/"),
         }
+        output_path = Path(config['rdf_output_dir']) / "NANDO_Gene_Association.ttl"
         write_gene_association_ttl(
-            output_path=Path(config['rdf_output_dir']) / "NANDO_Gene_Association.ttl",
+            output_path=output_path,
             associations=nando_ncbi_gene_map,
             disease_context_prefix="NANDO",
             disease_namespace_prefix="nando",
@@ -56,6 +58,7 @@ def disease_gene_nando() -> None:
             disease_id_prefix="",
             source_uri_map=source_uri_map,
         )
+        logger.info("finished NANDO gene association RDF build: output=%s associations=%s", output_path, len(nando_ncbi_gene_map))
     finally:
         nando_ncbi_gene_map.clear()
         gc.collect()

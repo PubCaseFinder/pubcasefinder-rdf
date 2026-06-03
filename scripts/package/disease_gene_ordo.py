@@ -24,6 +24,7 @@ from package.disease_gene_association_util import (
 logger = get_logger()
 
 def disease_gene_ordo() -> None:
+    logger.info("start Orphanet gene association RDF build")
     config = load_config('config.ini')
     orphanet_ncbi_gene_map = None
     gencc_associations = None
@@ -34,7 +35,7 @@ def disease_gene_ordo() -> None:
             config['ncbi_gene_info_path'],
             config['orphanet_product6_path'],
         )
-        print(f"Orphanet NCBI Count : {len(orphanet_ncbi_gene_map)}")
+        logger.info("Orphanet gene association count: %s", len(orphanet_ncbi_gene_map))
 
         gencc_associations = load_gencc_definitive_associations(
             config['ncbi_gene_info_path'],
@@ -43,7 +44,7 @@ def disease_gene_ordo() -> None:
         )
         before_merge = len(orphanet_ncbi_gene_map)
         merge_association_maps(orphanet_ncbi_gene_map, gencc_associations.orphanet_associations)
-        print(f"GenCC_ncbigene_orpha Count : {len(orphanet_ncbi_gene_map) - before_merge}")
+        logger.info("GenCC Orphanet associations added: %s", len(orphanet_ncbi_gene_map) - before_merge)
         gencc_associations = None
         gc.collect()
 
@@ -51,8 +52,9 @@ def disease_gene_ordo() -> None:
             "Orphanet": URIRef("http://www.orphadata.org/data/xml/en_product6.xml"),
             "GenCC": URIRef(GENCC_SOURCE_URI),
         }
+        output_path = Path(config['rdf_output_dir']) / "Orphanet_Gene_Association.ttl"
         write_gene_association_ttl(
-            output_path=Path(config['rdf_output_dir']) / "Orphanet_Gene_Association.ttl",
+            output_path=output_path,
             associations=orphanet_ncbi_gene_map,
             disease_context_prefix="ORDO",
             disease_namespace_prefix="ordo",
@@ -60,6 +62,7 @@ def disease_gene_ordo() -> None:
             disease_id_prefix="Orphanet_",
             source_uri_map=source_uri_map,
         )
+        logger.info("finished Orphanet gene association RDF build: output=%s associations=%s", output_path, len(orphanet_ncbi_gene_map))
     finally:
         gencc_associations = None
         if orphanet_ncbi_gene_map is not None:

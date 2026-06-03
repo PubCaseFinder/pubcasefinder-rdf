@@ -93,6 +93,7 @@ def ncbi_gene_summary_helper(
             if format_gene_summary is not None and format_gene_summary.poll() is None:
                 logger.warning('killing unfinished dataformats process: pid=%s', format_gene_summary.pid)
                 format_gene_summary.kill()
+    logger.info('finished get summary process: output=%s', ncbi_gene_summary_path)
     gc.collect()
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ from __future__ import annotations
 import gc
 from pathlib import Path
 
+from utils.log_util import get_logger
 from package.rdf_build_support import (
     load_config
 )
@@ -14,28 +15,32 @@ from package.disease_phenotype_association_util import (
     write_ordo_phenotype_association_ttl,
 )
 
+logger = get_logger()
+
 
 def disease_phenotype_ordo() -> None:
+    logger.info("start Orphanet phenotype association RDF build")
     config = load_config('config.ini')
     orphanet_frequency = None
     orphanet_manual = None
 
     try:
         orphanet_frequency = load_ordo_frequency_annotations(config['orphanet_product4_path'])
-        print(f"Orphanet_frequency Count : {len(orphanet_frequency)}")
+        logger.info("Orphanet frequency annotation count: %s", len(orphanet_frequency))
 
         orphanet_manual = load_manual_phenotype_associations(config['hpo_phenotype_path'], "ORPHA")
-        print(f"Orphanet_HPO_Manual Count : {len(orphanet_manual)}")
+        logger.info("Orphanet manual phenotype association count: %s", len(orphanet_manual))
 
         source = create_annotation_source("Orphanet", HPOA_SOURCE_URI)
 
+        output_path = Path(config['rdf_output_dir']) / "Orphanet_HP_Association.ttl"
         write_ordo_phenotype_association_ttl(
-            Path(config['rdf_output_dir']) / "Orphanet_HP_Association.ttl",
+            output_path,
             orphanet_manual,
             orphanet_frequency,
             source,
         )
-        print(f"Orphanet_HPO_Association Count : {len(orphanet_manual)}")
+        logger.info("finished Orphanet phenotype association RDF build: output=%s associations=%s", output_path, len(orphanet_manual))
     finally:
         if orphanet_manual is not None:
             orphanet_manual.clear()

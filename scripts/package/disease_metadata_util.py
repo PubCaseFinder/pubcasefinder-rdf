@@ -10,9 +10,12 @@ import duckdb
 from rdflib import Graph, Literal, Namespace, URIRef
 from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS
 
+from utils.log_util import get_logger
 from package.rdf_build_support import (
     open_text_writer,
 )
+
+logger = get_logger()
 
 
 GENEREVIEWS = Namespace("https://www.ncbi.nlm.nih.gov/books/")
@@ -64,6 +67,7 @@ def add_value(mapping: dict[str, list[str]], key: str, value: str) -> None:
 
 
 def load_omim_disease_ids(path: str | Path) -> list[str]:
+    logger.info("loading OMIM disease IDs: path=%s", path)
     omim_ids: list[str] = []
     seen: set[str] = set()
 
@@ -86,9 +90,11 @@ def load_omim_disease_ids(path: str | Path) -> list[str]:
         if row not in seen:
             seen.add(row)
             omim_ids.append(row)
+    logger.info("loaded OMIM disease IDs: path=%s count=%s", path, len(omim_ids))
     return omim_ids
 
 def load_omim_inheritance_map(path: str | Path) -> dict[str, list[str]]:
+    logger.info("loading OMIM inheritance map: path=%s", path)
     inheritance_map: dict[str, list[str]] = {}
 
     con = duckdb.connect()
@@ -108,10 +114,12 @@ def load_omim_inheritance_map(path: str | Path) -> dict[str, list[str]]:
         if row is None:
             break
         add_value(inheritance_map, row[0], row[1])
+    logger.info("loaded OMIM inheritance map: path=%s diseases=%s", path, len(inheritance_map))
     return inheritance_map
 
 
 def load_configured_disease_mappings(path: str | Path) -> DiseaseMappings:
+    logger.info("loading configured disease mappings: path=%s", path)
     path = Path(path)
     if path.suffix.lower() == ".obo":
         return build_disease_mappings(iter_mondo_exact_matches_from_obo(path))
@@ -124,27 +132,49 @@ def load_shared_reference_data(
         kegg_disease_path,
         gene_review_path
 ) -> SharedReferenceData:
-    return SharedReferenceData(
+    logger.info(
+        "loading shared disease reference data: inheritance=%s mondo=%s kegg=%s gene_reviews=%s",
+        medgene_omim_hpo_path,
+        mondo_owl_path,
+        kegg_disease_path,
+        gene_review_path,
+    )
+    reference_data = SharedReferenceData(
         inheritance_map=load_omim_inheritance_map(medgene_omim_hpo_path),
         mappings=load_configured_disease_mappings(mondo_owl_path),
         kegg_map=load_kegg_map(kegg_disease_path),
         gene_reviews_map=load_gene_reviews_map(gene_review_path),
     )
+    logger.info(
+        "loaded shared disease reference data: inheritance=%s orphanet_ids=%s kegg=%s gene_reviews=%s",
+        len(reference_data.inheritance_map),
+        len(reference_data.mappings.orphanet_ids),
+        len(reference_data.kegg_map),
+        len(reference_data.gene_reviews_map),
+    )
+    return reference_data
 
 
 def load_disease_mappings_from_owl(mondo_owl_path: str | Path) -> DiseaseMappings:
+    logger.info("loading disease mappings from OWL: path=%s", mondo_owl_path)
     return build_disease_mappings(iter_mondo_exact_matches_from_owl(mondo_owl_path))
 
 
 def load_disease_mappings_from_obo(mondo_obo_path: str | Path) -> DiseaseMappings:
+    logger.info("loading disease mappings from OBO: path=%s", mondo_obo_path)
     return build_disease_mappings(iter_mondo_exact_matches_from_obo(mondo_obo_path))
 
 
 def build_disease_mappings(terms: Iterable[MondoExactMatches]) -> DiseaseMappings:
+    logger.info("building disease mappings from MONDO exact matches")
     mappings = DiseaseMappings()
+    processed_count = 0
+    obsolete_count = 0
 
     for term in terms:
+        processed_count += 1
         if term.obsolete:
+            obsolete_count += 1
             continue
 
         omim_ids: list[str] = []
@@ -169,30 +199,43 @@ def build_disease_mappings(terms: Iterable[MondoExactMatches]) -> DiseaseMapping
             obsolete=False,
         )
 
+    logger.info(
+        "built disease mappings: terms=%s obsolete=%s omim_to_mondo=%s orphanet_ids=%s",
+        processed_count,
+        obsolete_count,
+        len(mappings.omim_to_mondo),
+        len(mappings.orphanet_ids),
+    )
     return mappings
 
 
 # graphのmondo_uri分、mondo_id, exactMatch対象, obsoleteのiteratorを返す
 def iter_mondo_exact_matches_from_owl(mondo_owl_path: str | Path) -> Iterable[MondoExactMatches]:
+    logger.info("iterating MONDO exact matches from OWL: path=%s", mondo_owl_path)
     graph = Graph()
     graph.parse(str(mondo_owl_path), format="xml")
 
     mondo_uris = sorted(set(graph.subjects(SKOS.exactMatch, None)), key=str)
+    yielded_count = 0
     for mondo_uri in mondo_uris:
         mondo_id = extract_mondo_id_from_uri(mondo_uri)
         if mondo_id is None:
             continue
 
+        yielded_count += 1
         yield MondoExactMatches(
             mondo_id=mondo_id,
             exact_matches=[str(uri) for uri in sorted(graph.objects(mondo_uri, SKOS.exactMatch), key=str)],
             obsolete=any(str(value).strip().lower() == "true" for value in graph.objects(mondo_uri, OWL.deprecated))
         )
+    logger.info("iterated MONDO exact matches from OWL: path=%s yielded=%s", mondo_owl_path, yielded_count)
 
 # oboのmondo_uri分、mondo_id, exactMatch対象, obsoleteのiteratorを返す
 def iter_mondo_exact_matches_from_obo(mondo_obo_path: str | Path) -> Iterable[MondoExactMatches]:
 
+    logger.info("iterating MONDO exact matches from OBO: path=%s", mondo_obo_path)
     doc = fastobo.load(mondo_obo_path)
+    yielded_count = 0
     for frame in doc:
         current_mondo_id = None
         current_is_deprecated = False
@@ -211,11 +254,13 @@ def iter_mondo_exact_matches_from_obo(mondo_obo_path: str | Path) -> Iterable[Mo
                         _append_unique(exact_matches, exact_match)
         if current_mondo_id is None:
             continue
+        yielded_count += 1
         yield MondoExactMatches(
             mondo_id=current_mondo_id,
             exact_matches=exact_matches,
             obsolete=current_is_deprecated
         )
+    logger.info("iterated MONDO exact matches from OBO: path=%s yielded=%s", mondo_obo_path, yielded_count)
 
 
 
@@ -271,6 +316,7 @@ def extract_exact_match_id(uri: str) -> tuple[str, str] | None:
 
 
 def load_kegg_map(path: str | Path) -> dict[str, str]:
+    logger.info("loading KEGG disease map: path=%s", path)
     kegg_map: dict[str, str] = {}
     con = duckdb.connect()
     query_statement = f"""
@@ -284,9 +330,11 @@ def load_kegg_map(path: str | Path) -> dict[str, str]:
         if row is None:
             break
         kegg_map[str(row[0])] = row[1]
+    logger.info("loaded KEGG disease map: path=%s diseases=%s", path, len(kegg_map))
     return kegg_map
 
 def load_gene_reviews_map(path: str | Path) -> dict[str, list[str]]:
+    logger.info("loading GeneReviews map: path=%s", path)
     gene_reviews_map: dict[str, list[str]] = {}
     con = duckdb.connect()
     query_statement = f"""
@@ -300,6 +348,7 @@ def load_gene_reviews_map(path: str | Path) -> dict[str, list[str]]:
         if row is None:
             break
         add_value(gene_reviews_map, str(row[2]), str(row[0]))
+    logger.info("loaded GeneReviews map: path=%s diseases=%s", path, len(gene_reviews_map))
     return gene_reviews_map
 
 
@@ -311,6 +360,7 @@ def write_omim_disease_ttl(
     kegg_map: dict[str, str],
     gene_reviews_map: dict[str, list[str]],
 ) -> None:
+    logger.info("writing OMIM disease TTL: output=%s diseases=%s", output_path, len(omim_ids))
     graph = Graph()
     graph.bind("dcterms", DCTERMS)
     graph.bind("genereviews", GENEREVIEWS)
@@ -349,6 +399,7 @@ def write_omim_disease_ttl(
 
     with open_text_writer(output_path) as writer:
         writer.write(graph.serialize(format="turtle"))
+    logger.info("finished writing OMIM disease TTL: output=%s triples=%s", output_path, len(graph))
 
 def write_orphanet_disease_ttl(
     output_path: str | Path,
@@ -358,6 +409,7 @@ def write_orphanet_disease_ttl(
     gene_reviews_map: dict[str, list[str]],
 ) -> None:
 
+    logger.info("writing Orphanet disease TTL: output=%s diseases=%s", output_path, len(mappings.orphanet_ids))
     graph = Graph()
     graph.bind("dcterms", DCTERMS)
     graph.bind("genereviews", GENEREVIEWS)
@@ -391,6 +443,7 @@ def write_orphanet_disease_ttl(
             graph.add((disease, RDFS.seeAlso, GTR[uml_id]))
     with open_text_writer(output_path) as writer:
         writer.write(graph.serialize(format="turtle"))
+    logger.info("finished writing Orphanet disease TTL: output=%s triples=%s", output_path, len(graph))
 
 def _append_unique(values: list[str], value: str) -> None:
     if value not in values:

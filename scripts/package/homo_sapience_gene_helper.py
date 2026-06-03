@@ -35,12 +35,14 @@ def download_homo_sapiens_gene_info(url: str, output_path: str | Path) -> Path:
 
 
 def homo_sapience_gene_helper() -> None:
+    logger.info("start Homo sapiens gene_info helper")
     config = load_config("config.ini")
     try:
-        download_homo_sapiens_gene_info(
+        output_path = download_homo_sapiens_gene_info(
             config["ncbi_homosapience_gene_data_uri"],
             config["ncbi_gene_info_path"],
         )
+        logger.info("finished Homo sapiens gene_info helper: output=%s", output_path)
     finally:
         gc.collect()
 

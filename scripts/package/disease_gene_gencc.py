@@ -15,17 +15,20 @@ from package.disease_gene_association_util import (
 logger = get_logger()
 
 def disease_gene_gencc() -> None:
+    logger.info("start GenCC gene association RDF build")
     config = load_config('config.ini')
     records = None
 
     try:
         records = load_gencc_submission_records(config['gencc_submissions_path'], config['ncbi_gene_info_path'])
-        print(f"GenCC submission count : {len(records)}")
+        logger.info("GenCC submission count: %s", len(records))
 
+        output_path = Path(config['rdf_output_dir']) / "GenCC_Gene_Association.ttl"
         write_gencc_gene_association_ttl(
-            Path(config['rdf_output_dir']) / "GenCC_Gene_Association.ttl",
+            output_path,
             records,
         )
+        logger.info("finished GenCC gene association RDF build: output=%s records=%s", output_path, len(records))
     finally:
         if records is not None:
             records.clear()
