@@ -16,7 +16,7 @@ from package import disease_metadata_ordo
 from package import disease_phenotype_omim
 from package import disease_phenotype_ordo
 from package import hp_ja
-from package import ncbi_gene_summary_helper
+from package import get_data_helper
 from package import ncbi_hgnc_gene_catalog
 from package import rdf_build_support
 from utils.log_util import get_logger
@@ -69,7 +69,7 @@ def run_ncbi_gene_summary_helper(config: dict[str, str]) -> None:
             + ", ".join(missing_keys)
         )
 
-    ncbi_gene_summary_helper.ncbi_gene_summary_helper(
+    get_data_helper.ncbi_gene_summary_helper(
         config["ncbi_gene_datasets_path"],
         config["ncbi_gene_dataformat_path"],
         config["ncbi_gene_summary_path"],
@@ -94,7 +94,7 @@ def main() -> None:
 
     download_data_list = create_download_data_list(config)
     if download_data_list != []:
-        ncbi_gene_summary_helper.download_data_set(download_data_list)
+        get_data_helper.download_data_set(download_data_list)
     steps.extend(
         [
             ("NCBIHGNCGeneCatalog", lambda: run_ncbi_hgnc_gene_catalog(config)),

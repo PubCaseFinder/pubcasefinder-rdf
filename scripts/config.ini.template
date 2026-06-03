@@ -4,29 +4,43 @@ ncbi_gene_info_path=
 ncbi_gene_summary_path=
 ncbi_gene_datasets_path=
 ncbi_gene_dataformat_path=
-ncbi_homosapience_gene_data_uri=
+ncbi_gene_info_url=
 
-omim_mim2gene_data_uri=
+omim_mim2gene_data_path=
+omim_mim2gene_data_url=
 
 medgen_mim2gene_path=
+medgen_mim2gene_url=
 medgen_omim_hpo_path=
+medgen_omim_hpo_url=
 
+# 以下リポジトリから最新のものをダウンロード
+# https://github.com/Orphanet/Orphadata_aggregated/
 orphanet_product4_path=
 orphanet_product6_path=
 
 mondo_owl_path=
+mondo_owl_url=
 
 gencc_submissions_path=
+gencc_submissions_url=
 
 panelsearch_association_path=
 panelsearch_manual_path=
 
 hpo_phenotype_path=
+hpo_phenotype_url=
+# TODO: データの取得元確認
 hpo_inheritance_ja_path=
+# 以下リポジトリから最新のものをダウンロード
+# https://github.com/ogishima/HPO-Japanese/tree/master
 hpo_japanese_path=
 
+# 以下から取得?
+# https://www.kegg.jp/kegg/download/
 kegg_disease_path=
 
 genereviews_omim_path=
+genereviews_omim_uri=
 
 rdf_output_dir=

@@ -38,24 +38,30 @@ def test_load_config(tmp_path):
     [Override]
     ncbi_gene_info_path={source_root}/NCBIGene/latest/Homo_sapiens.gene_info.gz
     ncbi_gene_summary_path={source_root}/NCBIGene/latest/gene_summary.tsv.gz
-    ncbi_gene_datasets_path=./tools/ncbi/datasets.exe
-    ncbi_gene_dataformat_path=./tools/ncbi/dataformat.exe
-    ncbi_homosapience_gene_data_uri=https://ftp.ncbi.nlm.nih.gov/gene/DATA/GENE_INFO/Mammalia/Homo_sapiens.gene_info.gz
-    omim_mim2gene_data_uri={source_root}/OMIM/latest/mim2gene.txt
+    ncbi_gene_datasets_path=./tools/ncbi/datasets
+    ncbi_gene_dataformat_path=./tools/ncbi/dataformat
+    ncbi_gene_info_url=https://ftp.ncbi.nlm.nih.gov/gene/DATA/GENE_INFO/Mammalia/Homo_sapiens.gene_info.gz
+    omim_mim2gene_data_path={source_root}/OMIM/latest/mim2gene.txt
+    omim_mim2gene_data_url=https://www.omim.org/static/omim/data/mim2gene.txt
     medgen_mim2gene_path={source_root}/MedGen/latest/mim2gene_medgen.txt
+    medgen_mim2gene_url=https://ftp.ncbi.nlm.nih.gov/gene/DATA/mim2gene_medgen
     medgen_omim_hpo_path={source_root}/MedGen/latest/MedGen_HPO_OMIM_Mapping.txt.gz
+    medgen_omim_hpo_url=https://ftp.ncbi.nlm.nih.gov/pub/medgen/MedGen_HPO_OMIM_Mapping.txt.gz
     orphanet_product4_path={source_root}/Orphanet/latest/en_product4.xml
     orphanet_product6_path={source_root}/Orphanet/latest/en_product6.xml
     mondo_owl_path={source_root}/MONDO/latest/mondo-international.owl
+    mondo_owl_url=https://purl.obolibrary.org/obo/mondo/mondo-international.owl
     gencc_submissions_path={source_root}/GenCC/latest/gencc-submissions.tsv
+    gencc_submissions_url=https://thegencc.org/download/action/submissions-export-tsv
     panelsearch_association_path={source_root}/PanelSearch/latest/nando_gene_association.txt
     panelsearch_manual_path={source_root}/PanelSearch/latest/shitei_gene_all_250819.txt
     hpo_phenotype_path={source_root}/HPO/latest/phenotype.hpoa
+    hpo_phenotype_url=http://purl.obolibrary.org/obo/hp/phenotype.hpoa
     hpo_inheritance_ja_path={source_root}/HPO/latest/HPO_Inheritance_en_jp.txt
     hpo_japanese_path={source_root}/HPO/latest/HPO-japanese.alpha.21Jul2023.tsv
     kegg_disease_path={source_root}/KEGG/latest/KEGG_disease.tsv
     genereviews_omim_path={source_root}/GeneReviews/latest/NBKid_shortname_OMIM.txt
-
+    genereviews_omim_uri=https://ftp.ncbi.nlm.nih.gov/pub/GeneReviews/NBKid_shortname_OMIM.txt
     rdf_output_dir={rdf_output_dir}
     """
 
@@ -64,8 +70,7 @@ def test_load_config(tmp_path):
 
     config = rdf_build_support.load_config(config_path)
 
-    assert config['ncbigene_file_path'] == source_root + '/NCBIGene/latest/Homo_sapiens.gene_info'
-    assert config['ncbigene_dir'] == source_root + '/NCBIGene/latest'
+    assert config['ncbi_gene_info_path'] == source_root + '/NCBIGene/latest/Homo_sapiens.gene_info.gz'
 
 
 def test_open_text_writer(tmp_path):
