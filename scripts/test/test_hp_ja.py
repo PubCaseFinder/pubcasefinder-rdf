@@ -1,7 +1,7 @@
 from package import hp_ja
 
 
-def test_load_hpo_japanese_labels_prefers_inheritance_labels(tmp_path):
+def test_load_hpo_japanese_labels(tmp_path):
     inheritance_path = tmp_path / "HPO_Inheritance_en_jp.txt"
     inheritance_path.write_text(
         "\t".join(["HPO ID", "English", "日本語"]) + "\n"

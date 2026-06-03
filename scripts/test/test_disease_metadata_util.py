@@ -168,7 +168,7 @@ def test_load_omim_inheritance_map(tmp_path):
     }
     assert inheritance_map == expect_inheritance_map
 
-def test_load_disease_mappings_from_owl_orphanet(tmp_path):
+def test_load_disease_mappings_from_owl(tmp_path):
     mondo_owl_path = (tmp_path / 'mondo.owl').as_posix()
     create_mock_file(mondo_owl_path, mondo_owl_orhanet_content)
     mappings = disease_metadata_util.load_disease_mappings_from_owl(mondo_owl_path)

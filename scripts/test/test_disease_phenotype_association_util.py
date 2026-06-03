@@ -114,7 +114,7 @@ def test_load_manual_phenotype_associations(tmp_path):
     assert manual_association_map == expect_manual_association_map
 
 
-def test_write_manual_phenotype_association_ttl_matches_legacy_graph(tmp_path):
+def test_write_manual_phenotype_association_ttl(tmp_path):
     output_path = tmp_path / "OMIM_HP_Association.ttl"
     source = disease_phenotype_association_util.create_annotation_source(
         "Human Phenotype Ontology Consortium",
