@@ -4,6 +4,7 @@ import argparse
 import os
 from collections.abc import Callable, Sequence
 from pathlib import Path
+import re
 
 from package import disease_gene_gencc
 from package import disease_gene_mondo
@@ -24,17 +25,25 @@ logger = get_logger()
 SCRIPT_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = SCRIPT_DIR / "config.ini"
 
+def should_run_ncbi_gene_summary(
+    ncbi_gene_datasets_path,
+    ncbi_gene_dataformat_path
+) -> bool:
+    if (ncbi_gene_datasets_path is None or ncbi_gene_datasets_path == '') or (ncbi_gene_dataformat_path is None or ncbi_gene_dataformat_path == ''):
+        return False
+    else:
+        return True
 
-def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build PubCaseFinder RDF files.")
-
-    parser.add_argument(
-        "--skip-ncbi-summary",
-        action="store_true",
-        help="Skip NCBIGeneSummaryHelper even when the summary cache is missing.",
-    )
-    args = parser.parse_args(argv)
-    return args
+def create_download_data_list(config: dict[str, str]) -> list[str]:
+    download_data_list = []
+    for key in config:
+        if not key.endswith('url'):
+            continue
+        if config[key] is None or config[key] == '':
+            continue
+        key_of_path = re.sub(r'url', 'path', key)
+        download_data_list.append((config[key], config[key_of_path]))
+    return download_data_list
 
 
 def run_step(name: str, action: Callable[[], None]) -> None:
@@ -45,14 +54,6 @@ def run_step(name: str, action: Callable[[], None]) -> None:
         logger.exception("=== FAILED %s ===", name)
         raise
     logger.info("=== FINISH %s ===", name)
-
-
-def should_run_ncbi_gene_summary(config: dict[str, str], args: argparse.Namespace) -> bool:
-    if args.skip_ncbi_summary:
-        logger.info("skip NCBIGeneSummaryHelper: --skip-ncbi-summary was specified")
-        return False
-
-    return True
 
 
 def run_ncbi_gene_summary_helper(config: dict[str, str]) -> None:
@@ -83,15 +84,17 @@ def run_ncbi_hgnc_gene_catalog(config: dict[str, str]) -> None:
     )
 
 
-def main(argv: Sequence[str] | None = None) -> None:
-    args = parse_args(argv)
+def main() -> None:
     os.chdir(SCRIPT_DIR)
     config = rdf_build_support.load_config(CONFIG_PATH)
 
     steps: list[tuple[str, Callable[[], None]]] = []
-    if should_run_ncbi_gene_summary(config, args):
+    if should_run_ncbi_gene_summary(config['ncbi_gene_datasets_path'], config['ncbi_gene_dataformat_path']):
         steps.append(("NCBIGeneSummaryHelper", lambda: run_ncbi_gene_summary_helper(config)))
 
+    download_data_list = create_download_data_list(config)
+    if download_data_list != []:
+        ncbi_gene_summary_helper.download_data_set(download_data_list)
     steps.extend(
         [
             ("NCBIHGNCGeneCatalog", lambda: run_ncbi_hgnc_gene_catalog(config)),

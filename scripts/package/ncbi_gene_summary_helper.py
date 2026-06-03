@@ -1,5 +1,3 @@
-
-import configparser
 import gc
 from dataclasses import dataclass, field
 import gzip
@@ -7,9 +5,11 @@ import os
 import shutil
 from subprocess import PIPE, Popen
 import tempfile
+import re
 
-from utils.log_util import get_logger
 from package.rdf_build_support import load_config
+from utils.get_data import download_file
+from utils.log_util import get_logger
 
 logger = get_logger()
 # TODO: テストコード
@@ -96,6 +96,17 @@ def ncbi_gene_summary_helper(
     logger.info('finished get summary process: output=%s', ncbi_gene_summary_path)
     gc.collect()
 
+# 引数: データのURI, データの出力path
+def download_data_set(data_list: list[set[str]]) -> None:
+    for data_uri, data_path in data_list:
+        try:
+            _ = download_file(
+                data_uri,
+                data_path,
+            )
+        finally:
+            gc.collect()
+
 if __name__ == "__main__":
     config = load_config('config.ini')
     ncbi_gene_summary_helper(
@@ -103,3 +114,13 @@ if __name__ == "__main__":
         config['ncbi_gene_dataformat_path'],
         config['ncbi_gene_summary_path'],
     )
+
+    download_data_list = []
+    for key in config:
+        if not key.endswith('url'):
+            continue
+        if config[key] is None or config[key] == '':
+            continue
+        key_of_path = re.sub(r'url', 'path', key)
+        download_data_list.append((config[key], config[key_of_path]))
+    download_data_set(download_data_list)

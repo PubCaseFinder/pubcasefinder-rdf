@@ -1,19 +1,29 @@
-from dataclasses import dataclass
-from subprocess import PIPE, Popen
 import urllib.request
 import urllib.error
+from pathlib import Path
 
 from utils.log_util import get_logger
 
 logger = get_logger()
 
-@dataclass
-class GetDataConfig(object):
-    data_path: str
-    url: str
+def download_file(url: str, output_path: str | Path) -> Path:
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-def get_data(config: GetDataConfig):
+    logger.info(
+        "downloading data: url=%s output=%s",
+        url,
+        output_path,
+    )
+
     try:
-        urllib.request.urlretrieve(config.url, config.data_path)
-    except urllib.error.ContentTooShortError as e:
-        logger.error('ContentTooShortError: %s', e)
+        urllib.request.urlretrieve(url, output_path)
+    except urllib.error.ContentTooShortError:
+        logger.exception("failed to download data")
+        raise
+    except urllib.error.URLError:
+        logger.exception("failed to download data")
+        raise
+
+    logger.info("finished downloading data: output=%s", output_path)
+    return output_path

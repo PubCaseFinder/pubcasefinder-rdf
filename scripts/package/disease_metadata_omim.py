@@ -23,7 +23,7 @@ def disease_metadata_omim() -> None:
     reference_data = None
 
     try:
-        omim_ids = load_omim_disease_ids(config['omim_mim2gene_data_uri'])
+        omim_ids = load_omim_disease_ids(config['omim_mim2gene_data_path'])
         logger.info("OMIM disease count: %s", len(omim_ids))
 
         reference_data = load_shared_reference_data(
