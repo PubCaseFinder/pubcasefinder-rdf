@@ -534,6 +534,27 @@ def test_build_mondo_gene_associations(mocker, tmp_path):
     })
     assert mondo_ncbi_gene_map == expect_mondo_ncbi_gene_map
 
+def test_add_association():
+    associations = disease_gene_association_util.AssociationMap({
+        '0008426\t6497': ['MedGen']
+    })
+    disease_gene_association_util.add_association(
+        associations,
+        '0008426',
+        '6497',
+        'Orphanet'
+    )
+    disease_gene_association_util.add_association(
+        associations,
+        '171300',
+        '23095',
+        'MedGen'
+    )
+    assert associations == disease_gene_association_util.AssociationMap({
+        '0008426\t6497': ['MedGen', 'Orphanet'],
+        '171300\t23095': ['MedGen']
+    })
+
 def test_write_gene_association_ttl(tmp_path):
     output_path = tmp_path / 'MONDO_Gene_Association.ttl'
     associations = disease_gene_association_util.AssociationMap({
