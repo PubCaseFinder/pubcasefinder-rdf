@@ -1,3 +1,6 @@
+from io import StringIO
+import xml.etree.ElementTree as ET
+
 from rdflib import Graph, BNode
 from rdflib.compare import isomorphic, to_isomorphic, graph_diff
 
@@ -114,67 +117,38 @@ def test_load_manual_phenotype_associations(tmp_path):
     assert manual_association_map == expect_manual_association_map
 
 
-def test_write_manual_phenotype_association_ttl(tmp_path):
-    output_path = tmp_path / "OMIM_HP_Association.ttl"
+def test_extract_frequency_label():
+    hpo_frequency_element = ET.fromstring(
+        '<HPOFrequency><Name lang="en"> Frequent (79-30%) </Name></HPOFrequency>'
+    )
+
+    assert disease_phenotype_association_util.extract_frequency_label(
+        hpo_frequency_element
+    ) == "Frequent (79-30%)"
+    assert disease_phenotype_association_util.extract_frequency_label(None) is None
+    assert disease_phenotype_association_util.extract_frequency_label(
+        ET.fromstring("<HPOFrequency/>")
+    ) is None
+
+
+def test_normalize_hpo_id():
+    assert disease_phenotype_association_util.normalize_hpo_id(" HP:0000256 ") == "0000256"
+    assert disease_phenotype_association_util.normalize_hpo_id("0000256") == "0000256"
+
+
+def test_create_annotation_source():
     source = disease_phenotype_association_util.create_annotation_source(
-        "Human Phenotype Ontology Consortium",
-        disease_phenotype_association_util.HPOA_SOURCE_URI,
-    )
-    manual_associations = {
-        "619340\t0011097": "Manual",
-        "619340\t0002187": "Manual",
-    }
-
-    disease_phenotype_association_util.write_manual_phenotype_association_ttl(
-        output_path,
-        "OMIM",
-        "mim",
-        "https://omim.org/entry/",
-        manual_associations,
-        source,
+        "Orphanet",
+        "https://example.org/en_product4.xml",
     )
 
-    actual_graph = Graph().parse(str(output_path), format="turtle")
-    expect_graph = Graph().parse(
-        data=f"""
-PREFIX dcterms: <http://purl.org/dc/terms/>
-PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-PREFIX mim: <https://omim.org/entry/>
-PREFIX oa: <http://www.w3.org/ns/oa#>
-PREFIX obo: <http://purl.obolibrary.org/obo/>
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-
-<https://pubcasefinder.dbcls.jp/phenotype_context/disease:OMIM:619340/phenotype:HP:0011097>
-    a oa:Annotation ;
-    oa:hasTarget mim:619340 ;
-    oa:hasBody obo:HP_0011097 ;
-    dcterms:source _:b1 ;
-    obo:ECO_9000001 obo:ECO_0000218 .
-
-_:b1
-    dcterms:creator "{source.creator}" ;
-    foaf:page <{source.page}> .
-
-<https://pubcasefinder.dbcls.jp/phenotype_context/disease:OMIM:619340/phenotype:HP:0002187>
-    a oa:Annotation ;
-    oa:hasTarget mim:619340 ;
-    oa:hasBody obo:HP_0002187 ;
-    dcterms:source _:b2 ;
-    obo:ECO_9000001 obo:ECO_0000218 .
-
-_:b2
-    dcterms:creator "{source.creator}" ;
-    foaf:page <{source.page}> .
-""",
-        format="turtle"
+    assert source == disease_phenotype_association_util.AnnotationSource(
+        creator="Orphanet",
+        page="https://example.org/en_product4.xml",
     )
 
-    assert len(actual_graph) == 14
-    assert isomorphic(actual_graph, expect_graph)
 
-
-def test_write_ordo_phenotype_association_ttl_matches_legacy_graph(tmp_path):
+def test_write_ordo_phenotype_association_ttl(tmp_path):
     output_path = tmp_path / "Orphanet_HP_Association.ttl"
     source = disease_phenotype_association_util.create_annotation_source(
         "Orphanet",
@@ -242,3 +216,109 @@ obo:HP_0040285 rdfs:label "Excluded (0%)"@en .
 
     assert len(actual_graph) == 21
     assert isomorphic(actual_graph, expect_graph)
+
+
+def test_write_manual_phenotype_association_ttl(tmp_path):
+    output_path = tmp_path / "OMIM_HP_Association.ttl"
+    source = disease_phenotype_association_util.create_annotation_source(
+        "Human Phenotype Ontology Consortium",
+        disease_phenotype_association_util.HPOA_SOURCE_URI,
+    )
+    manual_associations = {
+        "619340\t0011097": "Manual",
+        "619340\t0002187": "Manual",
+    }
+
+    disease_phenotype_association_util.write_manual_phenotype_association_ttl(
+        output_path,
+        "OMIM",
+        "mim",
+        "https://omim.org/entry/",
+        manual_associations,
+        source,
+    )
+
+    actual_graph = Graph().parse(str(output_path), format="turtle")
+    expect_graph = Graph().parse(
+        data=f"""
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX mim: <https://omim.org/entry/>
+PREFIX oa: <http://www.w3.org/ns/oa#>
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+<https://pubcasefinder.dbcls.jp/phenotype_context/disease:OMIM:619340/phenotype:HP:0011097>
+    a oa:Annotation ;
+    oa:hasTarget mim:619340 ;
+    oa:hasBody obo:HP_0011097 ;
+    dcterms:source _:b1 ;
+    obo:ECO_9000001 obo:ECO_0000218 .
+
+_:b1
+    dcterms:creator "{source.creator}" ;
+    foaf:page <{source.page}> .
+
+<https://pubcasefinder.dbcls.jp/phenotype_context/disease:OMIM:619340/phenotype:HP:0002187>
+    a oa:Annotation ;
+    oa:hasTarget mim:619340 ;
+    oa:hasBody obo:HP_0002187 ;
+    dcterms:source _:b2 ;
+    obo:ECO_9000001 obo:ECO_0000218 .
+
+_:b2
+    dcterms:creator "{source.creator}" ;
+    foaf:page <{source.page}> .
+""",
+        format="turtle"
+    )
+
+    assert len(actual_graph) == 14
+    assert isomorphic(actual_graph, expect_graph)
+
+
+def test_build_ordo_annotations():
+    annotations = disease_phenotype_association_util.build_ordo_annotations(
+        {
+            "58\t0000256": "Manual",
+            "166024\t0011097": "Manual",
+        },
+        {
+            "58\t0000256": "Very frequent (99-80%)",
+        },
+    )
+
+    assert annotations == [
+        disease_phenotype_association_util.OrdoPhenotypeAnnotation(
+            ordo_id="58",
+            hpo_id="0000256",
+            frequency_term_id="0040281",
+        ),
+        disease_phenotype_association_util.OrdoPhenotypeAnnotation(
+            ordo_id="166024",
+            hpo_id="0011097",
+            frequency_term_id=None,
+        ),
+    ]
+
+
+def test_write_frequency_labels():
+    writer = StringIO()
+
+    disease_phenotype_association_util.write_frequency_labels(writer)
+
+    assert writer.getvalue() == (
+        "obo:HP_0040280\n"
+        '    rdfs:label "Obligate (100%)"@en .\n'
+        "obo:HP_0040281\n"
+        '    rdfs:label "Very frequent (99-80%)"@en .\n'
+        "obo:HP_0040282\n"
+        '    rdfs:label "Frequent (79-30%)"@en .\n'
+        "obo:HP_0040283\n"
+        '    rdfs:label "Occasional (29-5%)"@en .\n'
+        "obo:HP_0040284\n"
+        '    rdfs:label "Very rare (<4-1%)"@en .\n'
+        "obo:HP_0040285\n"
+        '    rdfs:label "Excluded (0%)"@en .\n'
+    )

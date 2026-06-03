@@ -1,4 +1,5 @@
 import configparser
+import gzip
 from pathlib import Path
 import sys
 
@@ -22,6 +23,11 @@ def create_config_files(config_content):
         file_path = Path(value)
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.touch()
+
+
+def test_dotted_to_snake():
+    assert rdf_build_support.dotted_to_snake("ncbigene.file.path") == "ncbigene_file_path"
+    assert rdf_build_support.dotted_to_snake("rdf_output_dir") == "rdf_output_dir"
 
 
 def test_load_config(tmp_path):
@@ -73,3 +79,18 @@ def test_load_config(tmp_path):
     assert config['ncbigene_file_path'] == source_root + '/NCBIGene/latest/Homo_sapiens.gene_info'
     assert config['ncbigene_dir'] == source_root + '/NCBIGene/latest'
 
+
+def test_open_text_writer(tmp_path):
+    text_path = tmp_path / "nested" / "output.ttl"
+    with rdf_build_support.open_text_writer(text_path) as writer:
+        writer.write("line 1\n")
+        writer.write("line 2\n")
+
+    assert text_path.read_text(encoding="utf-8") == "line 1\nline 2\n"
+
+    gzip_path = tmp_path / "nested" / "output.ttl.gz"
+    with rdf_build_support.open_text_writer(gzip_path) as writer:
+        writer.write("line 1\n")
+
+    with gzip.open(gzip_path, "rt", encoding="utf-8") as reader:
+        assert reader.read() == "line 1\n"
