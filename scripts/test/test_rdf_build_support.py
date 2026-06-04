@@ -1,7 +1,6 @@
 import configparser
 import gzip
 from pathlib import Path
-import sys
 
 import pytest
 from package import rdf_build_support

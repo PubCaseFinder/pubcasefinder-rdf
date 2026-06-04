@@ -1,8 +1,8 @@
 from io import StringIO
 import xml.etree.ElementTree as ET
 
-from rdflib import Graph, BNode
-from rdflib.compare import isomorphic, to_isomorphic, graph_diff
+from rdflib import Graph
+from rdflib.compare import isomorphic
 
 from package import disease_phenotype_association_util
 
