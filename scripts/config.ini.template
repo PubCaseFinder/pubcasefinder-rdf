@@ -41,6 +41,6 @@ hpo_japanese_path=
 kegg_disease_path=
 
 genereviews_omim_path=
-genereviews_omim_uri=
+genereviews_omim_url=
 
 rdf_output_dir=

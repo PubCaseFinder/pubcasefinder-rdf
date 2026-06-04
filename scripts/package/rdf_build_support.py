@@ -26,8 +26,8 @@ def load_config(config_path: str | Path | None = None) -> dict[str, str]:
     default_config = {
         'ncbi_gene_info_path': '../data/source/NCBIGene/latest/Homo_sapiens.gene_info.gz',
         'ncbi_gene_summary_path': '../data/source/NCBIGene/latest/gene_summary.tsv.gz',
-        'ncbi_gene_datasets_path': './tools/ncbi/datasets',
-        'ncbi_gene_dataformat_path': './tools/ncbi/dataformat',
+        'ncbi_gene_datasets_path': '',
+        'ncbi_gene_dataformat_path': '',
         'ncbi_gene_info_url': '',
         'omim_mim2gene_data_path': '../data/source/OMIM/latest/mim2gene.txt',
         'omim_mim2gene_data_url': '',

@@ -13,6 +13,9 @@ import duckdb
 import chardet
 
 from utils.log_util import get_logger
+from package.rdf_build_support import (
+    open_text_writer,
+)
 
 logger = get_logger()
 
@@ -632,7 +635,8 @@ def write_gene_association_ttl(
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    graph.serialize(destination=str(output_path), format="turtle", encoding="utf-8")
+    with open_text_writer(output_path) as writer:
+        writer.write(graph.serialize(format="turtle"))
     logger.info("finished writing gene association TTL: output=%s triples=%s", output_path, len(graph))
 
 def write_gencc_gene_association_ttl(
@@ -664,7 +668,8 @@ def write_gencc_gene_association_ttl(
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    graph.serialize(destination=str(output_path), format="turtle", encoding="utf-8")
+    with open_text_writer(output_path) as writer:
+        writer.write(graph.serialize(format="turtle"))
     logger.info("finished writing GenCC gene association TTL: output=%s triples=%s", output_path, len(graph))
 
 
