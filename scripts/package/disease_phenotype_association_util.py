@@ -206,7 +206,7 @@ def write_manual_phenotype_association_ttl(
     disease_namespace = Namespace(disease_resource_prefix_uri)
 
     graph = Graph()
-    graph.bind("dcterm", DCTERMS)
+    graph.bind("dcterms", DCTERMS)
     graph.bind("foaf", FOAF)
     graph.bind(disease_resource_prefix, disease_namespace)
     graph.bind("oa", OA)

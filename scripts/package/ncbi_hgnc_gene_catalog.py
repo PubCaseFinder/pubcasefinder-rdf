@@ -11,7 +11,6 @@ from package.rdf_build_support import load_config
 
 logger = get_logger()
 
-# TODO: テスト
 def parse_dbxrefs(xrefs: str) -> dict[str, str] | None:
     if xrefs is None or xrefs == '-':
         return None
@@ -174,7 +173,7 @@ def ncbi_hgnc_gene_catalog(
 if __name__ == '__main__':
     config = load_config('config.ini')
     ncbi_hgnc_gene_catalog(
-        config['ncbigene_file_path'],
+        config['ncbi_gene_info_path'],
         config['ncbi_gene_summary_path'],
         Path(config['rdf_output_dir']) / 'all_gene.ttl'
     )

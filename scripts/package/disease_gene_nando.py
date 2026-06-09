@@ -32,6 +32,7 @@ def disease_gene_nando() -> None:
         )
         logger.info("NANDO PanelSearch associations added: %s", panel_search_stats.added)
 
+
         nanbyou_stats = merge_associations_from_tsv(
             config['panelsearch_manual_path'],
             nando_ncbi_gene_map,

@@ -460,13 +460,15 @@ def merge_associations_from_tsv(
             {gene_column}
         from
             read_csv('{path}', delim='\\t')
+        where
+            {disease_column} is not null
+            and {gene_column} is not null
         """
     res = con.execute(query_statement)
     while True:
         row = res.fetchone()
         if row is None:
             break
-
         if add_association(associations, str(row[0]), str(row[1]), source):
             stats.added += 1
         else:
