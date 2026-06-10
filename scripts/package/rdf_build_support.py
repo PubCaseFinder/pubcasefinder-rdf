@@ -13,11 +13,11 @@ def dotted_to_snake(key: str) -> str:
 
 # config pathを与えてconfigを読み取りディクショナリで返す
 def load_config(config_path: str | Path | None = None) -> dict[str, str]:
-    logger.info("loading config: path=%s", config_path)
-    path = Path(config_path)
-    if path is None:
+    if config_path is None:
         logger.error('Missing required config path')
         return {}
+    logger.info("loading config: path=%s", config_path)
+    path = Path(config_path)
 
     if not path.exists():
         logger.error('File is not exist: %s', path)
