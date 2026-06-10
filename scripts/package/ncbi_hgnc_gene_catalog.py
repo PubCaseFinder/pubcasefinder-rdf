@@ -135,7 +135,7 @@ def ncbi_hgnc_gene_catalog(
             g.add((gene, RDFS.seeAlso, mim))
             mim_count += 1
         if summary_description is not None:
-            g.add((gene, OBO['NCIT_C42581'], Literal(summary_description)))
+            g.add((gene, OBO['NCIT_C42581'], Literal(summary_description.strip())))
             summary_count += 1
 
         g.add((gene, DCTERMS.identifier, Literal(str(gene_id))))
