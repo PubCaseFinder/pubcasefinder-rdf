@@ -508,16 +508,17 @@ def create_utf8_file(path: str | Path, char_code: str):
         case 'utf-8':
             return path
         case 'CP949':
-            if Path(path).suffix == '.gz':
-                reader = gzip.open(path, 'rt', encoding='cp949')
-            else:
-                reader = open(path, 'r', encoding='cp949')
-
             base_path = Path(path)
             utf8_file_path = f'{base_path.parent}/{base_path.stem}_utf8{base_path.suffix}'
-            with open(utf8_file_path, 'w', encoding='utf-8') as writer:
-                writer.write(reader.read())
-            reader.close()
+            if Path(path).suffix == '.gz':
+                with gzip.open(path, 'rt', encoding='cp949') as reader:
+                    with gzip.open(utf8_file_path, 'wt', encoding='utf-8') as writer:
+                        writer.write(reader.read())
+            else:
+                with open(path, 'r', encoding='cp949') as reader:
+                    with open(utf8_file_path, 'w', encoding='utf-8') as writer:
+                        writer.write(reader.read())
+
             logger.info("created UTF-8 encoded file: source=%s output=%s", path, utf8_file_path)
             return utf8_file_path
         case None:
