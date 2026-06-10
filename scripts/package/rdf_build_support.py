@@ -49,7 +49,7 @@ def load_config(config_path: str | Path | None = None) -> dict[str, str]:
         'hpo_japanese_path': '../data/source/HPO/latest/HPO-japanese.alpha.21Jul2023.tsv',
         'kegg_disease_path': '../data/source/KEGG/latest/KEGG_disease.tsv',
         'genereviews_omim_path': '../data/source/GeneReviews/latest/NBKid_shortname_OMIM.txt',
-        'genereviews_omim_uri': '',
+        'genereviews_omim_url': '',
         'rdf_output_dir': '../data/rdf',
     }
 
