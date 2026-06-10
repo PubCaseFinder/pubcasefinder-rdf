@@ -194,6 +194,85 @@ package.disease_gene_gencc
 package.hp_ja
 ```
 
+## Validating RDF in Virtuoso
+
+You can load the generated Turtle files into a disposable Virtuoso container for
+local checks. The example below loads each `xxx.ttl` file into the graph
+`https://pubcasefinder.dbcls.jp/rdf/xxx`.
+
+1. Create a loader script.
+
+   ```bash
+   cat << 'EOF' > load_rdf.sh
+   #!/usr/bin/env bash
+   set -euo pipefail
+
+   for ttl_path in /usr/share/proj/*.ttl; do
+       [ -e "$ttl_path" ] || continue
+
+       file_name="$(basename "$ttl_path" .ttl)"
+       graph_name="https://pubcasefinder.dbcls.jp/rdf/${file_name}"
+
+       isql 1111 dba dba exec="DELETE FROM DB.DBA.LOAD_LIST WHERE ll_graph = '${graph_name}';"
+       isql 1111 dba dba exec="log_enable(2,1); SPARQL CLEAR GRAPH <${graph_name}>;"
+       isql 1111 dba dba exec="log_enable(2,1); ld_dir_all('/usr/share/proj', '${file_name}.ttl', '${graph_name}');"
+       isql 1111 dba dba exec="rdf_loader_run();"
+       isql 1111 dba dba exec="checkpoint;"
+   done
+   EOF
+   ```
+
+2. Start Virtuoso.
+
+   ```bash
+   docker run \
+       --detach \
+       --name test-virtuoso \
+       --interactive \
+       --tty \
+       --env DBA_PASSWORD=dba \
+       --publish 8000:8890 \
+       --volume ./data/rdf:/usr/share/proj \
+       --volume ./load_rdf.sh:/load_rdf.sh \
+       openlink/virtuoso-opensource-7:7.2.12
+   ```
+
+   If your generated RDF files are not under `./data/rdf`, change the first
+   volume path to the directory that contains them.
+
+3. Load the RDF files.
+
+   Virtuoso may reject commands immediately after the container starts. If that
+   happens, wait 30 to 60 seconds and run the command again.
+
+   ```bash
+   docker exec -it test-virtuoso /bin/bash /load_rdf.sh
+   ```
+
+4. Query the data.
+
+   Open `http://localhost:8000/sparql` in a browser. For example, this query
+   counts triples by graph.
+
+   ```sparql
+   SELECT ?g (COUNT(?s) AS ?c)
+   WHERE {
+     GRAPH ?g {
+       ?s ?p ?o .
+     }
+   }
+   GROUP BY ?g
+   ORDER BY DESC(?c)
+   ```
+
+5. Clean up.
+
+   ```bash
+   docker stop test-virtuoso
+   docker rm test-virtuoso
+   rm load_rdf.sh
+   ```
+
 ## Legacy Java Sources
 
 The current workflow is the Docker and Python workflow described above. Older
