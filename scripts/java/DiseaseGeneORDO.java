@@ -3,9 +3,9 @@ package pubcasefinder_260415;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 
-// Orphanet XML ベースの疾患-遺伝子関連に GenCC を補強して RDF を生成する。
+// Orphanet XML 기반 질환-유전자 연관에 GenCC를 보강해 RDF를 생성한다.
 public class DiseaseGeneORDO {
-/** Orphanet XML と GenCC を結合し、Orphanet_Gene_Association.ttl を生成する。 */
+	/** Orphanet XML과 GenCC를 병합해 Orphanet_Gene_Association.ttl을 생성한다. */
 	public static void main(String[] args) throws Exception {
 
 		LinkedHashMap<String, LinkedHashSet<String>> orphanetNcbiGeneMap =

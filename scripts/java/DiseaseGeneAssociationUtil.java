@@ -24,9 +24,9 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-// 疾患-遺伝子関連 RDF の生成に必要な共通ロジックをまとめた中核ユーティリティ
+// 질환-유전자 연관 RDF 생성에 필요한 공통 로직을 모은 핵심 유틸리티
 public class DiseaseGeneAssociationUtil {
-// 設定の解釈、元データの読み込み、疾患マッピングの拡張、TTL 出力を一箇所で担う。
+	// 설정 해석, 원본 데이터 로딩, 질환 매핑 확장, TTL 출력을 한곳에서 담당한다.
 
 	public static final String GENCC_SOURCE_URI = "https://search.thegencc.org/download/action/submissions-export-csv";
 	public static final String CONFIG_PATH = RdfBuildSupport.CONFIG_PATH;
@@ -40,7 +40,6 @@ public class DiseaseGeneAssociationUtil {
 	public static final String GENCC_SUBMISSIONS_PATH = RdfBuildSupport.resolveConfiguredFile(CONFIG, "gencc.submissions.path", RdfBuildSupport.resolveResourceRoot(CONFIG, "gencc.dir"), "gencc-submissions.tsv");
 	public static final String NANDO_ASSOCIATION_PATH = RdfBuildSupport.resolveConfiguredFile(CONFIG, "panelsearch.association.path", RdfBuildSupport.resolveResourceRoot(CONFIG, "panelsearch.dir"), "nando_gene_association.txt");
 	public static final String NANDO_MANUAL_PATH = RdfBuildSupport.resolveConfiguredFile(CONFIG, "panelsearch.manual.path", RdfBuildSupport.resolveResourceRoot(CONFIG, "panelsearch.dir"), "shitei_gene_all_250819.txt");
-	// rdf.output.dir
 	public static final String RDF_DIR = RdfBuildSupport.resolveConfiguredOutputDir(CONFIG);
 
 	public static class MergeStats {
@@ -124,69 +123,33 @@ public class DiseaseGeneAssociationUtil {
 		return hgncToNcbiMap;
 	}
 
-	// gencc-submissions.tsvからデータを読み取って、ncbi idと対応付けし、レコードを追加していく✅
 	public static ArrayList<GenCCSubmissionRecord> loadGenccSubmissionRecords() throws IOException {
 		return loadGenccSubmissionRecords(GENCC_SUBMISSIONS_PATH, NCBI_GENE_INFO_PATH);
 	}
 
-	// gencc-submissions.tsvからデータを読み取って、ncbi idと対応付けし、レコードを追加していく✅
 	public static ArrayList<GenCCSubmissionRecord> loadGenccSubmissionRecords(String genccSubmissionsPath, String ncbiGeneInfoPath) throws IOException {
-		// hashmapは何を読むべきか
 		LinkedHashMap<String, String> hgncToNcbiMap = loadHgncToNcbiMap(ncbiGeneInfoPath);
 		ArrayList<GenCCSubmissionRecord> records = new ArrayList<GenCCSubmissionRecord>();
 
-		// genccSubmissionsPathを読み取る
 		try (BufferedReader reader = RdfBuildSupport.openUtf8Reader(genccSubmissionsPath)) {
 			String line = reader.readLine();
 			while ((line = reader.readLine()) != null) {
-				// タブ区切りで配列にする
 				String[] split = line.split("\t", -1);
-				// 長さが19以下だとしたら飛ばす
 				if (split.length <= 19) {
 					continue;
 				}
 
-				// "GENCC_000101-HGNC_10896-OMIM_182212-HP_0000006-GENCC_100001"	"HGNC:10896"	"SKI"	"MONDO:0008426"	"Shprintzen-Goldberg syndrome"	"OMIM:182212"	"Shprintzen-Goldberg syndrome"	"GENCC:100001"	"Definitive"	"HP:0000006"	"Autosomal dominant"	"GENCC:000101"	"Ambry Genetics"	"HGNC:10896"	"SKI"	"OMIM:182212"	"Shprintzen-Goldberg syndrome"	"HP:0000006"	"Autosomal dominant inheritance"	"GENCC:000101"	"Ambry Genetics"	"GENCC:100001"	"Definitive"	"2018-03-30 13:31:56"	""	""	""	"PMID: 28106320"	"1034"	"2020-12-24"
-				// "GENCC_000101-HGNC_16636-OMIM_171300-HP_0000006-GENCC_100003"	"HGNC:16636"	"KIF1B"	"MONDO:0008233"	"pheochromocytoma"	"OMIM:171300"	"{Pheochromocytoma, susceptibility to}"	"GENCC:100003"	"Moderate"	"HP:0000006"	"Autosomal dominant"	"GENCC:000101"	"Ambry Genetics"	"HGNC:16636"	"KIF1B"	"OMIM:171300"	"Pheochromocytoma"	"HP:0000006"	"Autosomal dominant inheritance"	"GENCC:000101"	"Ambry Genetics"	"GENCC:100003"	"Moderate"	"2019-12-04 13:30:43"	""	""	""	"PMID: 28106320"	"69237"	"2020-12-24"
-				// "GENCC_000101-HGNC_16636-OMIM_118210-HP_0000006-GENCC_100004"	"HGNC:16636"	"KIF1B"	"MONDO:0007308"	"Charcot-Marie-Tooth disease type 2A1"	"OMIM:118210"	"Charcot-Marie-Tooth disease, type 2A1"	"GENCC:100004"	"Limited"	"HP:0000006"	"Autosomal dominant"	"GENCC:000101"	"Ambry Genetics"	"HGNC:16636"	"KIF1B"	"OMIM:118210"	"Charcot-Marie-Tooth disease, type 2A1"	"HP:0000006"	"Autosomal dominant inheritance"	"GENCC:000101"	"Ambry Genetics"	"GENCC:100004"	"Limited"	"2024-10-15 12:08:25"	""	""	""	"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5655771/"	"61327"	"2025-01-17"
-
-				// private static String normalizeValue(String value) {
-				// 	if (value == null) {
-				// 		return null;
-				// 	}
-				// 	String normalized = value.trim();
-				// 	if (normalized.startsWith("\"") && normalized.endsWith("\"") && normalized.length() >= 2) {
-				//
-				// 		// 1から全体の長さ-1まで切り出す
-				// 		normalized = normalized.substring(1, normalized.length() - 1);
-				// 	}
-				// 	return normalized;
-				// }
-
-				// private static String normalizeCurieValue(String value, String prefix) {
-				// 	String normalized = normalizeValue(value);
-				// 	return normalized.startsWith(prefix) ? normalized.substring(prefix.length()) : normalized;
-				// }
-
-				// private static String normalizeMoiCurie(String moiCurie) {
-				// 	if (moiCurie == null || moiCurie.isEmpty()) {
-				// 		return null;
-				// 	}
-				// 	return moiCurie.replace(":", "_");
-				// }
-
-				String genccId = normalizeValue(split[0]); // "GENCC_000101-HGNC_10896-OMIM_182212-HP_0000006-GENCC_100001" -> GENCC_000101-HGNC_10896-OMIM_182212-HP_0000006-GENCC_100001
-				String hgncId = normalizeCurieValue(split[1], "HGNC:"); // "HGNC:10896" -> 10896
-				String diseaseCurie = normalizeValue(split[5]); // "OMIM:182212" -> OMIM:182212
-				String classificationTitle = normalizeValue(split[8]); // "Definitive" -> Definitive
-				String moiCurie = normalizeMoiCurie(normalizeValue(split[9])); // "HP:0000006" -> HP_0000006
-				String submitterId = normalizeValue(split[19]); // "GENCC:000101" -> GENCC:000101
+				String genccId = normalizeValue(split[0]);
+				String hgncId = normalizeCurieValue(split[1], "HGNC:");
+				String diseaseCurie = normalizeValue(split[5]);
+				String classificationTitle = normalizeValue(split[8]);
+				String moiCurie = normalizeMoiCurie(normalizeValue(split[9]));
+				String submitterId = normalizeValue(split[19]);
 
 				if (genccId == null || hgncId == null || diseaseCurie == null || !diseaseCurie.contains(":")) {
 					continue;
 				}
 
-				// hgnvIdとncbiIdを対応付け
 				String ncbiGeneId = hgncToNcbiMap.get(hgncId);
 				if (ncbiGeneId == null) {
 					continue;
@@ -903,10 +866,8 @@ public class DiseaseGeneAssociationUtil {
 		}
 	}
 
-	// prefixとか配列につけて返している✅
 	public static void writeGenccGeneAssociationTtl(String outputPath, List<GenCCSubmissionRecord> records) throws IOException {
 		try (BufferedWriter writer = RdfBuildSupport.createBufferedWriter(outputPath)) {
-			// ファイルの最初にプレフィックスをつけておく
 			writer.write("PREFIX dcterms: <http://purl.org/dc/terms/>"); writer.newLine();
 			writer.write("PREFIX gencc: <https://search.thegencc.org/submissions/>"); writer.newLine();
 			writer.write("PREFIX nando: <http://nanbyodata.jp/ontology/nando#>"); writer.newLine();
@@ -919,36 +880,8 @@ public class DiseaseGeneAssociationUtil {
 			writer.write("PREFIX sio: <http://semanticscience.org/resource/>"); writer.newLine();
 
 			for (GenCCSubmissionRecord record : records) {
-
-				// private static String toDiseasePathSegment(String diseaseCurie) {
-				// 	if (diseaseCurie == null) {
-				// 		return null;
-				// 	}
-				// 	if (diseaseCurie.startsWith("Orphanet:")) {
-				// 		return "ORDO:" + normalizeCurieValue(diseaseCurie, "Orphanet:");
-				// 	}
-				// 	return diseaseCurie;
-				// }
 				String diseasePath = toDiseasePathSegment(record.diseaseCurie);
-
-				// private static String toDiseaseResource(String diseaseCurie) {
-				// 	if (diseaseCurie == null) {
-				// 		return null;
-				// 	}
-				// 	if (diseaseCurie.startsWith("OMIM:")) {
-				// 		return "mim:" + normalizeCurieValue(diseaseCurie, "OMIM:");
-				// 	}
-				// 	if (diseaseCurie.startsWith("Orphanet:")) {
-				// 		return "ordo:Orphanet_" + normalizeCurieValue(diseaseCurie, "Orphanet:");
-				// 	}
-				// 	if (diseaseCurie.startsWith("MONDO:")) {
-				// 		return "obo:MONDO_" + normalizeCurieValue(diseaseCurie, "MONDO:");
-				// 	}
-				// 	return null;
-				// }
 				String diseaseResource = toDiseaseResource(record.diseaseCurie);
-
-				// diseasePath = OMIM:182212, diseaseResource = mim:182212, mapしたncbiID, genccId = GENCC_000101-HGNC_10896-OMIM_182212-HP_0000006-GENCC_100001
 				if (diseasePath == null || diseaseResource == null || record.ncbiGeneId == null || record.genccId == null) {
 					continue;
 				}

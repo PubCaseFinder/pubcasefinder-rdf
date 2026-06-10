@@ -28,51 +28,29 @@ class GeneInfoRecord {
 	String summary;
 }
 
-// NCBI gene_info、HGNC 連携情報、gene summary を結合して all_gene.ttl を生成するユーティリティ
+// NCBI gene_info, HGNC 연계 정보, gene summary를 합쳐 all_gene.ttl을 생성하는 유틸리티
 public class NCBIHGNCGeneCatalog {
 	private static final Properties CONFIG = RdfBuildSupport.loadConfig();
-	// RDF/latest/all_gene.ttl
 	private static final String OUTPUT_PATH = DiseaseGeneAssociationUtil.RDF_DIR + "/all_gene.ttl";
 	private static final String SUMMARY_PATH_KEY = "ncbigene.summary.path";
 	private static final String NCBI_GENE_DIR_KEY = "ncbigene.dir";
 	private static final String DATASETS_PATH_KEY = "ncbigene.datasets.path";
 	private static final String DATAFORMAT_PATH_KEY = "ncbigene.dataformat.path";
 
-	/** gene summary と gene_info を結合し、all_gene.ttl を生成する。 */
-	// 🤔
+	/** gene summary와 gene_info를 결합해 all_gene.ttl을 생성한다. */
 	public static void main(String[] args) throws Exception {
 		LinkedHashMap<String, String> geneSummaryMap = loadGeneSummaryMap();
 		System.out.println("NCBI gene summary Count : " + geneSummaryMap.size());
 
-		// ncbigene.file.pathからとってきたデータに対して、summaryをくっつける
-		// ncbigene.file.path = data/NCBIGene/latest/Homo_sapiens.gene_info ⛔どこからとってきた？
-
-		// class GeneInfoRecord {
-		// 	String geneId;
-		// 	String symbol;
-		// 	LinkedHashSet<String> synonyms = new LinkedHashSet<String>();
-		// 	String hgncId;
-		// 	String mimId;
-		// 	String mapLocation;
-		// 	String description;
-		// 	String typeOfGene;
-		// 	String otherDesignations;
-		// 	String summary;
-		// }
 		LinkedHashMap<String, GeneInfoRecord> geneMap = loadGeneInfoRecords(
-				// ncbigene.file.path
 				DiseaseGeneAssociationUtil.NCBI_GENE_INFO_PATH,
 				geneSummaryMap);
 		System.out.println("NCBI gene Count : " + geneMap.size());
 
-		// ttlとして書き出す
 		writeAllGeneTtl(OUTPUT_PATH, geneMap);
 	}
 
-	/** キャッシュ済みの summary ファイルがあれば読み込み、なければ NCBI CLI で summary を準備する。 */ ✅
-	// gene_summary.tsvを読み取って以下を返す
-	// {gene_id: abstract}
-	// 例: {7157: This gene encodes a tumor suppressor protein containing transcriptional activation, DNA binding, and oligomerization domains. The encoded protein responds to diverse cellular stresses to regulate expression of target genes, thereby inducing cell cycle arrest, apoptosis, senescence, DNA repair, or changes in metabolism. Mutations in this gene are associated with a variety of human cancers, including hereditary cancers such as Li-Fraumeni syndrome. Alternative splicing of this gene and the use of alternate promoters result in multiple transcript variants and isoforms. Additional isoforms have also been shown to result from the use of alternate translation initiation codons from identical transcript variants (PMIDs: 12032546, 20937277). [provided by RefSeq, Dec 2016]}
+	/** 캐시된 summary 파일이 있으면 읽고, 없으면 NCBI CLI를 통해 summary를 준비한다. */
 	private static LinkedHashMap<String, String> loadGeneSummaryMap() throws IOException, InterruptedException {
 		String summaryPath = resolveSummaryPath();
 		if (summaryPath != null) {
@@ -81,10 +59,8 @@ public class NCBIHGNCGeneCatalog {
 		return loadGeneSummaryMapFromDatasets();
 	}
 
-	/** 設定値と latest 規則を使って summary ファイルのパスを求める。 */ ✅
-	// ene_summary.tsv.gz
+	/** 설정값과 latest 규칙을 이용해 summary 파일 경로를 찾는다. */
 	private static String resolveSummaryPath() {
-		// ncbigene.summary.path
 		String configuredSummaryPath = RdfBuildSupport.trimToNull(CONFIG.getProperty(SUMMARY_PATH_KEY));
 		if (configuredSummaryPath != null) {
 			Path configuredPath = Paths.get(configuredSummaryPath);
@@ -106,18 +82,12 @@ public class NCBIHGNCGeneCatalog {
 		return null;
 	}
 
-	// ✅
-	// gene_summary.tsvを読み取って以下を返す
-	// {gene_id: abstract}
-	// 例: {7157: This gene encodes a tumor suppressor protein containing transcriptional activation, DNA binding, and oligomerization domains. The encoded protein responds to diverse cellular stresses to regulate expression of target genes, thereby inducing cell cycle arrest, apoptosis, senescence, DNA repair, or changes in metabolism. Mutations in this gene are associated with a variety of human cancers, including hereditary cancers such as Li-Fraumeni syndrome. Alternative splicing of this gene and the use of alternate promoters result in multiple transcript variants and isoforms. Additional isoforms have also been shown to result from the use of alternate translation initiation codons from identical transcript variants (PMIDs: 12032546, 20937277). [provided by RefSeq, Dec 2016]}
 	private static LinkedHashMap<String, String> loadGeneSummaryMapFromTsv(String path) throws IOException {
 		LinkedHashMap<String, String> geneSummaryMap = new LinkedHashMap<String, String>();
 		try (BufferedReader reader = RdfBuildSupport.openUtf8Reader(path)) {
 			String line;
 			while ((line = reader.readLine()) != null) {
 				String[] split = line.split("\t", -1);
-				// https://qiita.com/YanHengGo/items/e315986bb2f549f4f685
-				// 数字マッチしていたら
 				if (split.length > 1 && split[0].matches("\\d+")) {
 					geneSummaryMap.put(split[0], split[1]);
 				}
@@ -129,7 +99,6 @@ public class NCBIHGNCGeneCatalog {
 		return geneSummaryMap;
 	}
 
-	// 多分NCBIGeneSummaryHelper.javaでncbi cliからデータをとってきているのと同じ✅
 	private static LinkedHashMap<String, String> loadGeneSummaryMapFromDatasets() throws IOException, InterruptedException {
 		String datasetsPath = RdfBuildSupport.resolveExecutablePath(CONFIG, DATASETS_PATH_KEY, "datasets.exe");
 		String dataformatPath = RdfBuildSupport.resolveExecutablePath(CONFIG, DATAFORMAT_PATH_KEY, "dataformat.exe");
@@ -203,7 +172,6 @@ public class NCBIHGNCGeneCatalog {
 		return thread;
 	}
 
-	// ncbigene.file.pathとsummaryをくっつける✅
 	private static LinkedHashMap<String, GeneInfoRecord> loadGeneInfoRecords(
 			String geneInfoPath,
 			LinkedHashMap<String, String> geneSummaryMap) throws IOException {
@@ -218,44 +186,10 @@ public class NCBIHGNCGeneCatalog {
 					continue;
 				}
 
-				// class GeneInfoRecord {
-				// 	String geneId;
-				// 	String symbol;
-				// 	LinkedHashSet<String> synonyms = new LinkedHashSet<String>();
-				// 	String hgncId;
-				// 	String mimId;
-				// 	String mapLocation;
-				// 	String description;
-				// 	String typeOfGene;
-				// 	String otherDesignations;
-				// 	String summary;
-				// }
-
 				GeneInfoRecord gene = new GeneInfoRecord();
 				gene.geneId = split[1];
 				gene.symbol = split[2];
 				gene.synonyms = parsePipeSeparatedValues(split[4]);
-
-
-				// private static void parseDbXrefs(String dbXrefs, GeneInfoRecord gene) {
-				// 	if (dbXrefs == null || dbXrefs.equals("-")) {
-				// 		return;
-				// 	}
-				// 
-				// 	for (String ref : dbXrefs.split("\\|")) {
-				// 		if (ref.startsWith("HGNC:HGNC:")) {
-				// 			gene.hgncId = ref.substring("HGNC:HGNC:".length());
-				// 		}
-				// 		else if (ref.startsWith("HGNC:")) {
-				// 			gene.hgncId = ref.substring("HGNC:".length()).replace("HGNC:", "");
-				// 		}
-				// 		else if (ref.startsWith("MIM:")) {
-				// 			gene.mimId = ref.substring("MIM:".length());
-				// 		}
-				// 	}
-				// }
-
-				// いくつかのIDがパイプされている文字列から、HGNC: などのプレフィックスを省いてgene.hgncIdやmimiIdに入れていく
 				parseDbXrefs(split[5], gene);
 				gene.mapLocation = normalizeDash(split[7]);
 				gene.description = normalizeDash(split[8]);

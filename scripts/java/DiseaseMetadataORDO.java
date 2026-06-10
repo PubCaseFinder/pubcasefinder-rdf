@@ -3,11 +3,11 @@ package pubcasefinder_260415;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 
-// Orphanet 疾患メタデータを組み合わせて Orphanet.ttl を生成する。
+// Orphanet 질환 메타데이터를 조합해 Orphanet.ttl을 생성한다.
 public class DiseaseMetadataORDO {
-/** 共有マッピングと外部参照を用いて Orphanet.ttl を生成する。 */
+	/** 공유 매핑과 외부 참조를 이용해 Orphanet.ttl을 생성한다. */
 	public static void main(String[] args) throws Exception {
-// OMIM と Orphanet のメタデータで同じ基準を使えるよう、共通マッピング資源を再利用する。
+		// OMIM과 Orphanet 메타데이터가 같은 기준을 쓰도록 공통 매핑 리소스를 재사용한다.
 		DiseaseMetadataUtil.SharedReferenceData referenceData =
 				DiseaseMetadataUtil.loadSharedReferenceData();
 		System.out.println("OMIM inheritance Count : " + referenceData.inheritanceMap.size());

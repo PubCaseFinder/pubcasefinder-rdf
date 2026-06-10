@@ -2,9 +2,9 @@ package pubcasefinder_260415;
 
 import java.util.LinkedHashMap;
 
-// 手動管理の OMIM-HPO 表現型関連を RDF に変換し、OMIM_HP_Association.ttl を生成する。
+// 수동 OMIM-HPO 표현형 연관을 RDF로 변환해 OMIM_HP_Association.ttl을 생성한다.
 public class DiseasePhenotypeOMIM {
-/** HPOA ベースの手動 OMIM 表現型関連を読み込み、OMIM_HP_Association.ttl を生成する。 */
+	/** HPOA 기반 수동 OMIM 표현형 연관을 읽어 OMIM_HP_Association.ttl을 생성한다. */
 	public static void main(String[] args) throws Exception {
 		LinkedHashMap<String, String> omimManual =
 				DiseasePhenotypeAssociationUtil.loadManualPhenotypeAssociations(

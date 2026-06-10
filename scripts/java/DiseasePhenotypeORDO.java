@@ -2,9 +2,9 @@ package pubcasefinder_260415;
 
 import java.util.LinkedHashMap;
 
-// Orphanet-HPO 表現型関連と頻度注釈を結合し、Orphanet_HP_Association.ttl を生成する。
+// Orphanet-HPO 표현형 연관과 빈도 주석을 결합해 Orphanet_HP_Association.ttl을 생성한다.
 public class DiseasePhenotypeORDO {
-/** Orphanet の頻度情報と手動 HPO 関連を結合し、Orphanet_HP_Association.ttl を生成する。 */
+	/** Orphanet 빈도 정보와 수동 HPO 연관을 합쳐 Orphanet_HP_Association.ttl을 생성한다. */
 	public static void main(String[] args) throws Exception {
 		LinkedHashMap<String, String> orphanetFrequency =
 				DiseasePhenotypeAssociationUtil.loadOrdoFrequencyAnnotations(

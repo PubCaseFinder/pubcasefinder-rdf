@@ -12,7 +12,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Properties;
 
-// OMIM/Orphanet 疾患メタデータ生成に必要な共通ロジックをまとめたユーティリティ
+// OMIM/Orphanet 질환 메타데이터 생성에 필요한 공통 로직을 모은 유틸리티
 public class DiseaseMetadataUtil {
 	public static final String CONFIG_PATH = RdfBuildSupport.CONFIG_PATH;
 	private static final Properties CONFIG = RdfBuildSupport.loadConfig();
@@ -158,7 +158,7 @@ public class DiseaseMetadataUtil {
 		return loadDiseaseMappingsFromOwl(MONDO_OWL_PATH);
 	}
 
-/** OMIM/Orphanet メタデータ生成で共通利用する参照データを一括で読み込む。 */
+	/** OMIM/Orphanet 메타데이터 생성에 공통으로 쓰는 참조 데이터를 한 번에 적재한다. */
 	public static SharedReferenceData loadSharedReferenceData() throws IOException {
 		SharedReferenceData data = new SharedReferenceData();
 		data.inheritanceMap = loadOmimInheritanceMap(MEDGEN_OMIM_HPO_PATH);

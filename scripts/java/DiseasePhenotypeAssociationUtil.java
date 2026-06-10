@@ -19,7 +19,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-// 疾患-表現型関連 RDF の生成に必要な共通ロジックをまとめたユーティリティ
+// 질환-표현형 연관 RDF 생성에 필요한 공통 로직을 모은 유틸리티
 public class DiseasePhenotypeAssociationUtil {
 	private static final Properties CONFIG = RdfBuildSupport.loadConfig();
 	public static final String ORPHANET_PRODUCT4_PATH = RdfBuildSupport.resolveConfiguredFile(CONFIG, "orphanet.product4.path", RdfBuildSupport.resolveResourceRoot(CONFIG, "orphanet.dir"), "en_product4.xml");
@@ -134,7 +134,7 @@ public class DiseasePhenotypeAssociationUtil {
 		return map;
 	}
 
-/** annotation source の blank node に入れる作成者情報とページ情報を生成する。 */
+	/** annotation source blank node에 들어갈 작성자와 페이지 정보를 생성한다. */
 	public static AnnotationSource createAnnotationSource(String creator, String page) {
 		AnnotationSource source = new AnnotationSource();
 		source.creator = creator;

@@ -4,9 +4,9 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 
-// MedGen ベースの OMIM 疾患-遺伝子関連に GenCC を補強して RDF を生成する。
+// MedGen 기반 OMIM 질환-유전자 연관에 GenCC를 보강해 RDF를 생성한다.
 public class DiseaseGeneOMIM {
-/** MedGen と GenCC を結合し、OMIM_Gene_Association.ttl を生成する。 */
+	/** MedGen과 GenCC를 병합해 OMIM_Gene_Association.ttl을 생성한다. */
 	public static void main(String[] args) throws IOException {
 
 		LinkedHashMap<String, LinkedHashSet<String>> omimNcbiGeneMap =

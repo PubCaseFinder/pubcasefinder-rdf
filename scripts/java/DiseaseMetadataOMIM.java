@@ -3,11 +3,11 @@ package pubcasefinder_260415;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 
-// OMIM 疾患メタデータを組み合わせて OMIM.ttl を生成する。
+// OMIM 질환 메타데이터를 조합해 OMIM.ttl을 생성한다.
 public class DiseaseMetadataOMIM {
-/** OMIM ID 集合と外部マッピング情報を結合し、OMIM.ttl を生成する。 */
+	/** OMIM ID 집합과 외부 매핑 정보를 결합해 OMIM.ttl을 생성한다. */
 	public static void main(String[] args) throws Exception {
-// 明示的な OMIM 疾患 ID 集合を出発点とし、外部マッピングと参照情報を付加する。
+		// 명시적인 OMIM 질환 ID 집합을 시작점으로 삼고, 외부 매핑과 참조 정보를 덧붙인다.
 		LinkedHashSet<String> omimIds = DiseaseMetadataUtil.loadOmimDiseaseIds(DiseaseMetadataUtil.OMIM_MIM2GENE_PATH);
 		System.out.println("OMIM All Count : " + omimIds.size());
 

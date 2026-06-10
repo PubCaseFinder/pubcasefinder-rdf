@@ -4,9 +4,9 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 
-// PanelSearch の元データと手作業で整理したファイルを結合し、NANDO 疾患-遺伝子関連 RDF を生成する。
+// PanelSearch 원본과 수기 정리 파일을 병합해 NANDO 질환-유전자 연관 RDF를 생성한다.
 public class DiseaseGeneNANDO {
-/** PanelSearch と難病の手作業整理ファイルを結合し、NANDO_Gene_Association.ttl を生成する。 */
+	/** PanelSearch와 난병 수기 정리 파일을 병합해 NANDO_Gene_Association.ttl을 생성한다. */
 	public static void main(String[] args) throws IOException {
 
 		LinkedHashMap<String, LinkedHashSet<String>> nandoNcbiGeneMap = new LinkedHashMap<String, LinkedHashSet<String>>();

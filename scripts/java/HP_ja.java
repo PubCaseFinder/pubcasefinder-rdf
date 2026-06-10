@@ -11,7 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
 
-// 継承用語集と公式ラベル表を結合し、日本語 HPO ラベル RDF を生成する。
+// 상속 용어집과 공식 라벨 테이블을 결합해 일본어 HPO 라벨 RDF를 생성한다.
 public class HP_ja {
 	private static final Properties CONFIG = RdfBuildSupport.loadConfig();
 	private static final String HPO_INHERITANCE_JA_PATH = RdfBuildSupport.resolveConfiguredFile(CONFIG, "hpo.inheritance.ja.path", RdfBuildSupport.resolveResourceRoot(CONFIG, "hpo.dir"), "HPO_Inheritance_en_jp.txt");
