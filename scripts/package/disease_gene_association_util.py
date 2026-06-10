@@ -170,6 +170,9 @@ def load_gencc_submission_records(
         ncbi_gene_id = hgnc_to_ncbi_map.get(hgnc_id)
         if ncbi_gene_id is None:
             continue
+        moi_curie = row[5]
+        if moi_curie is None:
+            moi_curie = ''
 
         disease_path, disease_uri = disease_reference
         submitter_id = row[3]
@@ -181,7 +184,7 @@ def load_gencc_submission_records(
                 gene_uri=NCBIGENE[ncbi_gene_id],
                 submission_uri=GENCC[gencc_id],
                 classification_title=row[4].strip() or "",
-                inheritance_uri=to_hpo_uri(row[5]) ,
+                inheritance_uri=to_hpo_uri(moi_curie) ,
                 submitter_label=resolve_gencc_submitter_label(submitter_id),
             )
         )
@@ -725,7 +728,7 @@ def to_gencc_disease_reference(disease_curie: str | None) -> tuple[str, URIRef] 
     return None
 
 
-def to_hpo_uri(hpo_curie: str | None) -> URIRef | None:
+def to_hpo_uri(hpo_curie: str) -> URIRef | None:
     hpo_id = hpo_curie.removeprefix('HP:')
     return OBO[f"HP_{hpo_id}"] if hpo_id else None
 
