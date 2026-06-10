@@ -107,6 +107,9 @@ def ncbi_hgnc_gene_catalog(
         other_designations = row[7]
         summary_description = row[8]
 
+        if summary_description is not None:
+            summary_description = summary_description.strip()
+
         hgnc_id = ''
         mim_id = ''
 
