@@ -48,7 +48,7 @@ def ncbi_gene_summary_helper(
         err_create_summary = create_summary.communicate()[1]
 
         if create_summary.returncode != 0:
-            raise RuntimeError('datasets.exe failed: ' + err_create_summary.decode())
+            raise RuntimeError('datasets failed: ' + err_create_summary.decode())
 
     finally:
         if create_summary is not None and create_summary.poll() is None:
@@ -64,6 +64,7 @@ def ncbi_gene_summary_helper(
         logger.info('expanding gzip jsonl to temp file: %s', temp_jsonl_path)
         with gzip.open(summary_json_path, 'rb') as rf:
             shutil.copyfileobj(rf, temp_jsonl, length=1024 * 1024)
+            temp_jsonl.flush()
 
         format_gene_summary = Popen([
             ncbi_gene_dataformat_path,
