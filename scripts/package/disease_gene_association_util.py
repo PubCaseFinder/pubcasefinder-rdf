@@ -454,7 +454,7 @@ def merge_associations_from_tsv(
     original_path = path
     path = check_file_char_code(path)
     if not path:
-        sys.exit(1)
+        raise RuntimeError('file argument is empty')
 
     con = duckdb.connect()
     query_statement = f"""
@@ -508,16 +508,21 @@ def create_utf8_file(path: str | Path, char_code: str):
         case 'utf-8':
             return path
         case 'CP949':
-            if Path(path).suffix == '.gz':
-                reader = gzip.open(path, 'rt', encoding='cp949')
-            else:
-                reader = open(path, 'r', encoding='cp949')
-
             base_path = Path(path)
-            utf8_file_path = f'{base_path.parent}/{base_path.stem}_utf8{base_path.suffix}'
-            with open(utf8_file_path, 'w', encoding='utf-8') as writer:
-                writer.write(reader.read())
-            reader.close()
+            if Path(path).suffix == '.gz':
+                input_path_without_gz = base_path.with_suffix('')
+                utf8_file_path = input_path_without_gz.with_name(
+                    f'{input_path_without_gz.stem}_utf8{input_path_without_gz.suffix}'
+                )
+                with gzip.open(path, 'rt', encoding='cp949') as reader:
+                    with open(utf8_file_path, 'w', encoding='utf-8') as writer:
+                        writer.write(reader.read())
+            else:
+                utf8_file_path = base_path.with_name(f'{base_path.stem}_utf8{base_path.suffix}')
+                with open(path, 'r', encoding='cp949') as reader:
+                    with open(utf8_file_path, 'w', encoding='utf-8') as writer:
+                        writer.write(reader.read())
+
             logger.info("created UTF-8 encoded file: source=%s output=%s", path, utf8_file_path)
             return utf8_file_path
         case None:
