@@ -14,7 +14,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -23,7 +22,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
-
 // 질환-유전자 연관 RDF 생성에 필요한 공통 로직을 모은 핵심 유틸리티
 public class DiseaseGeneAssociationUtil {
 	// 설정 해석, 원본 데이터 로딩, 질환 매핑 확장, TTL 출력을 한곳에서 담당한다.
