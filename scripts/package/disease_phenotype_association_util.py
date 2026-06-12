@@ -159,10 +159,12 @@ def write_ordo_phenotype_association_ttl(
     graph.bind("rdf", RDF)
     graph.bind("rdfs", RDFS)
 
-    blank_node_counter = 0
+    source_creator = source.creator
+    source_page = source.page
+    source_node = URIRef(source_page)
+    graph.add((source_node, DCTERMS.creator, Literal(source_creator)))
+    graph.add((source_node, FOAF.page, URIRef(source_page)))
     for annotation in build_ordo_annotations(manual_associations, frequency_by_association):
-        blank_node_counter += 1
-        source_node = BNode(f"b{blank_node_counter}")
 
         disease = URIRef(
             "https://pubcasefinder.dbcls.jp/phenotype_context/"
@@ -177,8 +179,6 @@ def write_ordo_phenotype_association_ttl(
         graph.add((disease, DCTERMS.source, source_node))
         graph.add((disease, OBO["ECO_9000001"], OBO["ECO_0000218"]))
 
-        graph.add((source_node, DCTERMS.creator, Literal(source.creator)))
-        graph.add((source_node, FOAF.page, URIRef(source.page)))
 
     for label, hpo_id in ORDO_FREQUENCY_TO_HPO.items():
         graph.add((OBO[f"HP_{hpo_id}"], RDFS.label, Literal(label, lang="en")))
@@ -214,13 +214,13 @@ def write_manual_phenotype_association_ttl(
     graph.bind("rdf", RDF)
     graph.bind("rdfs", RDFS)
 
-    blank_node_counter = 0
+    source_creator = source.creator
+    source_page = source.page
+    source_node = URIRef(source_page)
+    graph.add((source_node, DCTERMS.creator, Literal(source_creator)))
+    graph.add((source_node, FOAF.page, URIRef(source_page)))
     for key in manual_associations:
         disease_id, hpo_id = key.split("\t")
-        blank_node_counter += 1
-        source_node = BNode(f"b{blank_node_counter}")
-        source_creator = source.creator
-        source_page = source.page
 
         disease = URIRef(f'https://pubcasefinder.dbcls.jp/phenotype_context/disease:{disease_namespace_in_path}:{disease_id}/phenotype:HP:{hpo_id}')
 
@@ -230,8 +230,6 @@ def write_manual_phenotype_association_ttl(
         graph.add((disease, DCTERMS.source, source_node))
         graph.add((disease, OBO['ECO_9000001'], OBO['ECO_0000218']))
 
-        graph.add((source_node, DCTERMS.creator, Literal(source_creator)))
-        graph.add((source_node, FOAF.page, URIRef(source_page)))
     with open_text_writer(output_path) as writer:
         writer.write(graph.serialize(format='turtle'))
     logger.info("finished writing manual phenotype association TTL: output=%s triples=%s", output_path, len(graph))
