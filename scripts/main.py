@@ -96,6 +96,11 @@ def main() -> None:
     download_data_list = create_download_data_list(config)
     if download_data_list != []:
         get_data_helper.download_data_set(download_data_list)
+
+    inheritance_map_list = get_data_helper.update_hpo_subclass(config['hpo_inheritance_path'], '0000005')
+    get_data_helper.create_hpo_inheritance_en_ja(config['hpo_inheritance_ja_path'], inheritance_map_list)
+    _ = get_data_helper.check_hpo_inheritance_en_ja(config['hpo_inheritance_ja_path'])
+
     steps.extend(
         [
             ("NCBIHGNCGeneCatalog", lambda: run_ncbi_hgnc_gene_catalog(config)),

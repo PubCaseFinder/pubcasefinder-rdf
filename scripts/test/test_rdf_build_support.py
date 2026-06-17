@@ -53,14 +53,17 @@ def test_load_config(tmp_path):
     gencc_submissions_path={source_root}/GenCC/latest/gencc-submissions.tsv
     gencc_submissions_url=https://thegencc.org/download/action/submissions-export-tsv
     panelsearch_association_path={source_root}/PanelSearch/latest/nando_gene_association.txt
-    panelsearch_manual_path={source_root}/PanelSearch/latest/shitei_gene_all_250819.txt
+    panelsearch_manual_path={source_root}/PanelSearch/latest/shitei_gene_all.txt
+    panelsearch_manual_url=https://dev-pubcasefinder.dbcls.jp/sparqlist/api/pcf_rdf_nando_gene_association
     hpo_phenotype_path={source_root}/HPO/latest/phenotype.hpoa
     hpo_phenotype_url=http://purl.obolibrary.org/obo/hp/phenotype.hpoa
+    hpo_inheritance_path={source_root}/HPO/latest/hp.owl
+    hpo_inheritance_url=http://purl.obolibrary.org/obo/hp.owl
     hpo_inheritance_ja_path={source_root}/HPO/latest/HPO_Inheritance_en_jp.txt
     hpo_japanese_path={source_root}/HPO/latest/HPO-japanese.alpha.21Jul2023.tsv
     kegg_disease_path={source_root}/KEGG/latest/KEGG_disease.tsv
     genereviews_omim_path={source_root}/GeneReviews/latest/NBKid_shortname_OMIM.txt
-    genereviews_omim_uri=https://ftp.ncbi.nlm.nih.gov/pub/GeneReviews/NBKid_shortname_OMIM.txt
+    genereviews_omim_url=https://ftp.ncbi.nlm.nih.gov/pub/GeneReviews/NBKid_shortname_OMIM.txt
     rdf_output_dir={rdf_output_dir}
     """
 
@@ -70,6 +73,8 @@ def test_load_config(tmp_path):
     config = rdf_build_support.load_config(config_path)
 
     assert config['ncbi_gene_info_path'] == source_root + '/NCBIGene/latest/Homo_sapiens.gene_info.gz'
+    assert config['panelsearch_manual_path'] == source_root + '/PanelSearch/latest/shitei_gene_all.txt'
+    assert config['hpo_inheritance_path'] == source_root + '/HPO/latest/hp.owl'
 
 
 def test_open_text_writer(tmp_path):
