@@ -27,9 +27,10 @@ CONFIG_PATH = SCRIPT_DIR / "config.ini"
 
 def should_run_ncbi_gene_summary(
     ncbi_gene_datasets_path,
-    ncbi_gene_dataformat_path
+    ncbi_gene_dataformat_path,
+    ncbi_gene_summary_path,
 ) -> bool:
-    if (ncbi_gene_datasets_path is None or ncbi_gene_datasets_path == '') or (ncbi_gene_dataformat_path is None or ncbi_gene_dataformat_path == ''):
+    if (ncbi_gene_datasets_path is None or ncbi_gene_datasets_path == '') or (ncbi_gene_dataformat_path is None or ncbi_gene_dataformat_path == '') or (ncbi_gene_summary_path is None or ncbi_gene_summary_path == ''):
         return False
     else:
         return True
@@ -89,7 +90,7 @@ def main() -> None:
     config = rdf_build_support.load_config(CONFIG_PATH)
 
     steps: list[tuple[str, Callable[[], None]]] = []
-    if should_run_ncbi_gene_summary(config['ncbi_gene_datasets_path'], config['ncbi_gene_dataformat_path']):
+    if should_run_ncbi_gene_summary(config['ncbi_gene_datasets_path'], config['ncbi_gene_dataformat_path'], config['ncbi_gene_summary_path']):
         steps.append(("NCBIGeneSummaryHelper", lambda: run_ncbi_gene_summary_helper(config)))
 
     download_data_list = create_download_data_list(config)
