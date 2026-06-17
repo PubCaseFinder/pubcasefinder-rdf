@@ -81,3 +81,74 @@ def test_update_hpo_subclass_loads_root_and_descendants(tmp_path):
             ja="",
         ),
     ]
+
+
+def test_create_hpo_inheritance_en_ja_merges_previous_translations(tmp_path):
+    inheritance_path = tmp_path / "HPO_Inheritance_en_jp.txt"
+    old_content = (
+        "HPO ID\t英語\t日本語\n"
+        "HP:9999999\tAutosomal dominant inheritance\t常染色体優性遺伝\n"
+        "HP:0000007\tAutosomal recessive inheritance\t常染色体劣性遺伝\n"
+        "HP:0001450\tY-linked inheritance\tY連鎖遺伝\n"
+    )
+    inheritance_path.write_text(old_content, encoding="utf-8")
+
+    get_data_helper.create_hpo_inheritance_en_ja(
+        inheritance_path,
+        [
+            get_data_helper.inheritance_map(
+                id="HP:0000006",
+                en="Autosomal dominant inheritance",
+                ja="",
+            ),
+            get_data_helper.inheritance_map(
+                id="HP:0001417",
+                en="X-linked inheritance",
+                ja="",
+            ),
+            get_data_helper.inheritance_map(
+                id="HP:0034345",
+                en="Mendelian inheritance",
+                ja=None,
+            ),
+        ],
+    )
+
+    assert inheritance_path.read_text(encoding="utf-8") == (
+        "HPO ID\t英語\t日本語\n"
+        "HP:0000006\tAutosomal dominant inheritance\t常染色体優性遺伝\n"
+        "HP:0001417\tX-linked inheritance\t\n"
+        "HP:0034345\tMendelian inheritance\t\n"
+    )
+    assert (tmp_path / "HPO_Inheritance_en_jp_old.txt").read_text(encoding="utf-8") == old_content
+    assert (tmp_path / "HPO_Inheritance_en_jp_new.txt").read_text(encoding="utf-8") == (
+        "HPO ID\t英語\t日本語\n"
+        "HP:0000006\tAutosomal dominant inheritance\t\n"
+        "HP:0001417\tX-linked inheritance\t\n"
+        "HP:0034345\tMendelian inheritance\t\n"
+    )
+
+
+def test_check_hpo_inheritance_en_ja_returns_true_when_all_translated(tmp_path):
+    inheritance_path = tmp_path / "HPO_Inheritance_en_jp.txt"
+    inheritance_path.write_text(
+        "HPO ID\t英語\t日本語\n"
+        "HP:0000006\tAutosomal dominant inheritance\t常染色体優性遺伝\n"
+        "HP:0000007\tAutosomal recessive inheritance\t常染色体劣性遺伝\n",
+        encoding="utf-8",
+    )
+
+    assert get_data_helper.check_hpo_inheritance_en_ja(inheritance_path) is True
+
+
+def test_check_hpo_inheritance_en_ja_returns_false_when_translation_is_missing(tmp_path):
+    inheritance_path = tmp_path / "HPO_Inheritance_en_jp.txt"
+    inheritance_path.write_text(
+        "HPO ID\t英語\t日本語\n"
+        "HP:0000006\tAutosomal dominant inheritance\t常染色体優性遺伝\n"
+        "HP:0001417\tX-linked inheritance\t\n"
+        "HP:0034345\tMendelian inheritance\n",
+        encoding="utf-8",
+    )
+
+    assert get_data_helper.check_hpo_inheritance_en_ja(inheritance_path) is False

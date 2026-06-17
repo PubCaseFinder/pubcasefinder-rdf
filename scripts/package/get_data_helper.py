@@ -10,6 +10,7 @@ import re
 
 from rdflib import Graph, Namespace, URIRef
 from rdflib.namespace import RDFS
+import duckdb
 
 from package.rdf_build_support import load_config
 from utils.get_data import download_file
@@ -61,6 +62,11 @@ def get_subclass(
 
 
 def update_hpo_subclass(hpo_owl_path: str | Path, mode_of_inheritance_id: str) -> list[inheritance_map]:
+    logger.info(
+        "loading HPO inheritance subclass tree: path=%s root=HP:%s",
+        hpo_owl_path,
+        mode_of_inheritance_id,
+    )
     graph = Graph()
     graph.parse(str(hpo_owl_path), format='xml')
 
@@ -83,8 +89,61 @@ def update_hpo_subclass(hpo_owl_path: str | Path, mode_of_inheritance_id: str) -
         'http://purl.obolibrary.org/obo/HP_',
         graph,
     )
+    logger.info(
+        "loaded HPO inheritance subclass tree: path=%s terms=%s",
+        hpo_owl_path,
+        len(inheritance_map_list),
+    )
     return inheritance_map_list
 
+def create_hpo_inheritance_en_ja(inheritance_ja_path_name: str | Path, inheritance_map_list: list[inheritance_map]) -> None:
+    logger.info("creating HPO inheritance Japanese mapping: path=%s", inheritance_ja_path_name)
+    hpo_inheritance_en_ja_old_path = str(Path(inheritance_ja_path_name).with_suffix('')) + '_old.txt'
+    hpo_inheritance_en_ja_new_path = str(Path(inheritance_ja_path_name).with_suffix('')) + '_new.txt'
+    shutil.copy2(inheritance_ja_path_name, hpo_inheritance_en_ja_old_path)
+    with open(hpo_inheritance_en_ja_new_path, 'w', encoding='utf-8') as writer:
+        writer.write('HPO ID\t英語\t日本語\n')
+        for hpo_inheritance in inheritance_map_list:
+            writer.write(f'{hpo_inheritance.id}\t{hpo_inheritance.en}\t{hpo_inheritance.ja or ""}\n')
+
+    con = duckdb.connect()
+    query_statement = f"""
+        copy (
+            select
+                n."HPO ID",
+                n."英語",
+                o."日本語"
+            from read_csv('{hpo_inheritance_en_ja_new_path}', delim='\\t', all_varchar=true) as n
+            left join read_csv('{hpo_inheritance_en_ja_old_path}', delim='\\t', all_varchar=true) as o
+            on n."英語" = o."英語"
+        ) to '{inheritance_ja_path_name}' (FORMAT CSV, DELIMITER '\\t', HEADER true)
+        """
+    _ = con.execute(query_statement)
+    logger.info("created HPO inheritance Japanese mapping: path=%s count=%s", inheritance_ja_path_name, len(inheritance_map_list))
+
+
+def check_hpo_inheritance_en_ja(inheritance_ja_path_name: str | Path) -> bool:
+    logger.info("checking HPO inheritance Japanese mapping: path=%s", inheritance_ja_path_name)
+    con = duckdb.connect()
+    query_statement = f"""
+        select
+            "HPO ID"
+        from read_csv('{inheritance_ja_path_name}', delim='\\t', all_varchar=true) as n
+        where "日本語" is null or trim("日本語") = ''
+        """
+    res = con.execute(query_statement)
+    jp_empty_id = []
+    while True:
+        row = res.fetchone()
+        if row is None:
+            break
+        jp_empty_id.append(row[0])
+    if len(jp_empty_id) == 0:
+        logger.info("all HPO inheritance Japanese mappings are translated: path=%s", inheritance_ja_path_name)
+        return True
+
+    logger.warning('need translate english ontologies: %s', len(jp_empty_id))
+    return False
 
 def ncbi_gene_summary_helper(
         ncbi_gene_datasets_path: str,
@@ -204,3 +263,8 @@ if __name__ == "__main__":
         key_of_path = re.sub(r'url', 'path', key)
         download_data_list.append((config[key], config[key_of_path]))
     download_data_set(download_data_list)
+
+
+    inheritance_map_list = update_hpo_subclass(config['hpo_inheritance_path'], '0000005')
+    create_hpo_inheritance_en_ja(config['hpo_inheritance_ja_path'], inheritance_map_list)
+    _ = check_hpo_inheritance_en_ja(config['hpo_inheritance_ja_path'])
