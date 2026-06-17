@@ -1,17 +1,91 @@
 import gc
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import gzip
 import os
+from pathlib import Path
 import shutil
 from subprocess import PIPE, Popen
 import tempfile
 import re
+
+from rdflib import Graph, Namespace, URIRef
+from rdflib.namespace import RDFS
 
 from package.rdf_build_support import load_config
 from utils.get_data import download_file
 from utils.log_util import get_logger
 
 logger = get_logger()
+
+OBO = Namespace("http://purl.obolibrary.org/obo/")
+
+
+@dataclass
+class inheritance_map:
+    id: str
+    en: str
+    ja: str | None = None
+
+
+def get_subclass(
+    root_uri: URIRef,
+    inheritance_map_list: list[inheritance_map],
+    attach_prefix: str,
+    remove_prefix: str,
+    graph: Graph,
+    visited: set[str] | None = None,
+) -> None:
+    if visited is None:
+        visited = set()
+
+    root_key = str(root_uri)
+    if root_key in visited:
+        return
+    visited.add(root_key)
+
+    children = sorted(graph.subjects(RDFS.subClassOf, root_uri), key=str)
+    for child in children:
+        if str(child) in visited:
+            continue
+
+        child_en_list = sorted(graph.objects(child, RDFS.label), key=str)
+        for child_en in child_en_list:
+            inheritance_map_list.append(
+                inheritance_map(
+                    id=attach_prefix + str(child).removeprefix(remove_prefix),
+                    en=str(child_en),
+                    ja='',
+                )
+            )
+        get_subclass(child, inheritance_map_list, attach_prefix, remove_prefix, graph, visited)
+
+
+def update_hpo_subclass(hpo_owl_path: str | Path, mode_of_inheritance_id: str) -> list[inheritance_map]:
+    graph = Graph()
+    graph.parse(str(hpo_owl_path), format='xml')
+
+    inheritance_map_list: list[inheritance_map] = []
+    root_uri = OBO['HP_' + mode_of_inheritance_id]
+    root_en_list = sorted(graph.objects(root_uri, RDFS.label), key=str)
+    for root_en in root_en_list:
+        inheritance_map_list.append(
+            inheritance_map(
+                id='HP:' + mode_of_inheritance_id,
+                en=str(root_en),
+                ja=None,
+            )
+        )
+
+    get_subclass(
+        root_uri,
+        inheritance_map_list,
+        'HP:',
+        'http://purl.obolibrary.org/obo/HP_',
+        graph,
+    )
+    return inheritance_map_list
+
+
 def ncbi_gene_summary_helper(
         ncbi_gene_datasets_path: str,
         ncbi_gene_dataformat_path: str,
