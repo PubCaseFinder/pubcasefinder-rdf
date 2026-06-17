@@ -36,8 +36,8 @@ def disease_gene_nando() -> None:
         nanbyou_stats = merge_associations_from_tsv(
             config['panelsearch_manual_path'],
             nando_ncbi_gene_map,
-            'NANDO',
-            'NCBI',
+            'nando_id',
+            'gene_id',
             "Nanbyou"
         )
         logger.info("NANDO Nanbyou associations added: %s", nanbyou_stats.added)

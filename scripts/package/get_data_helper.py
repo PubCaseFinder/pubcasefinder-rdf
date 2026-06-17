@@ -109,11 +109,17 @@ def download_data_set(data_list: list[set[str]]) -> None:
 
 if __name__ == "__main__":
     config = load_config('config.ini')
-    ncbi_gene_summary_helper(
+    if all([
         config['ncbi_gene_datasets_path'],
         config['ncbi_gene_dataformat_path'],
         config['ncbi_gene_summary_path'],
-    )
+
+    ]):
+        ncbi_gene_summary_helper(
+            config['ncbi_gene_datasets_path'],
+            config['ncbi_gene_dataformat_path'],
+            config['ncbi_gene_summary_path'],
+        )
 
     download_data_list = []
     for key in config:
