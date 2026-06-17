@@ -8,7 +8,8 @@ from package.rdf_build_support import (
     load_config
 )
 from package.disease_phenotype_association_util import (
-    HPOA_SOURCE_URI,
+    HPOA_SOURCE,
+    HPOA_PAGE,
     create_annotation_source,
     load_manual_phenotype_associations,
     load_ordo_frequency_annotations,
@@ -31,7 +32,7 @@ def disease_phenotype_ordo() -> None:
         orphanet_manual = load_manual_phenotype_associations(config['hpo_phenotype_path'], "ORPHA")
         logger.info("Orphanet manual phenotype association count: %s", len(orphanet_manual))
 
-        source = create_annotation_source("Orphanet", HPOA_SOURCE_URI)
+        source = create_annotation_source(HPOA_SOURCE, "Orphanet", HPOA_PAGE)
 
         output_path = Path(config['rdf_output_dir']) / "Orphanet_HP_Association.ttl"
         write_ordo_phenotype_association_ttl(

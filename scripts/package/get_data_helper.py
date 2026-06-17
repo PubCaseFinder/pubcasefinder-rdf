@@ -12,7 +12,6 @@ from utils.get_data import download_file
 from utils.log_util import get_logger
 
 logger = get_logger()
-# TODO: テストコード
 def ncbi_gene_summary_helper(
         ncbi_gene_datasets_path: str,
         ncbi_gene_dataformat_path: str,

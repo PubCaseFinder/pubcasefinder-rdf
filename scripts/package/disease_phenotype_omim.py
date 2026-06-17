@@ -8,7 +8,8 @@ from package.rdf_build_support import (
     load_config
 )
 from package.disease_phenotype_association_util import (
-    HPOA_SOURCE_URI,
+    HPOA_SOURCE,
+    HPOA_PAGE,
     create_annotation_source,
     load_manual_phenotype_associations,
     write_manual_phenotype_association_ttl,
@@ -27,8 +28,9 @@ def disease_phenotype_omim() -> None:
         logger.info("OMIM manual phenotype association count: %s", len(omim_manual))
 
         source = create_annotation_source(
+            HPOA_SOURCE,
             "Human Phenotype Ontology Consortium",
-            HPOA_SOURCE_URI,
+            HPOA_PAGE,
         )
 
         output_path = Path(config['rdf_output_dir']) / "OMIM_HP_Association.ttl"
