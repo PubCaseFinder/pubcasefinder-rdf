@@ -506,7 +506,7 @@ def create_utf8_file(path: str | Path, char_code: str):
     logger.info("detected file character code: path=%s encoding=%s", path, char_code)
     match char_code:
         case 'utf-8':
-            return path
+            return Path(path)
         case 'CP949':
             base_path = Path(path)
             if Path(path).suffix == '.gz':

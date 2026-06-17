@@ -506,8 +506,8 @@ Label	NANDO	Symbol	GeneID
 
 def test_check_file_char_code(tmp_path):
     character_codes = {
-        'cp949': (tmp_path / 'cp949_file_utf8.txt').as_posix(),
-        'utf-8': (tmp_path / 'utf-8_file.txt').as_posix(),
+        'cp949': Path((tmp_path / 'cp949_file_utf8.txt').as_posix()),
+        'utf-8': Path((tmp_path / 'utf-8_file.txt').as_posix()),
         'cp932': None,
     }
     for code, expect_result in character_codes.items():
