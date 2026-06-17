@@ -138,11 +138,13 @@ def test_normalize_hpo_id():
 
 def test_create_annotation_source():
     source = disease_phenotype_association_util.create_annotation_source(
+        disease_phenotype_association_util.HPOA_SOURCE,
         "Orphanet",
         "https://example.org/en_product4.xml",
     )
 
     assert source == disease_phenotype_association_util.AnnotationSource(
+        source=disease_phenotype_association_util.HPOA_SOURCE,
         creator="Orphanet",
         page="https://example.org/en_product4.xml",
     )
@@ -151,8 +153,9 @@ def test_create_annotation_source():
 def test_write_ordo_phenotype_association_ttl(tmp_path):
     output_path = tmp_path / "Orphanet_HP_Association.ttl"
     source = disease_phenotype_association_util.create_annotation_source(
+        disease_phenotype_association_util.HPOA_SOURCE,
         "Orphanet",
-        disease_phenotype_association_util.HPOA_SOURCE_URI,
+        disease_phenotype_association_util.HPOA_PAGE,
     )
     manual_associations = {
         "58\t0000256": "Manual",
@@ -175,6 +178,7 @@ def test_write_ordo_phenotype_association_ttl(tmp_path):
 PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 PREFIX hoom: <http://www.semanticweb.org/ontology/HOOM#>
+PREFIX hpoa: <http://compbio.charite.de/jenkins/job/hpo.annotations.current/lastSuccessfulBuild/artifact/current/>
 PREFIX oa: <http://www.w3.org/ns/oa#>
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX ordo: <http://www.orpha.net/ORDO/>
@@ -186,21 +190,17 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     oa:hasTarget ordo:Orphanet_58 ;
     oa:hasBody obo:HP_0000256 ;
     hoom:with_frequency obo:HP_0040281 ;
-    dcterms:source _:b1 ;
+    dcterms:source hpoa:phenotype.hpoa ;
     obo:ECO_9000001 obo:ECO_0000218 .
-
-_:b1
-    dcterms:creator "{source.creator}" ;
-    foaf:page <{source.page}> .
 
 <https://pubcasefinder.dbcls.jp/phenotype_context/disease:ORDO:166024/phenotype:HP:0011097>
     a oa:Annotation ;
     oa:hasTarget ordo:Orphanet_166024 ;
     oa:hasBody obo:HP_0011097 ;
-    dcterms:source _:b2 ;
+    dcterms:source hpoa:phenotype.hpoa ;
     obo:ECO_9000001 obo:ECO_0000218 .
 
-_:b2
+hpoa:phenotype.hpoa
     dcterms:creator "{source.creator}" ;
     foaf:page <{source.page}> .
 
@@ -214,15 +214,16 @@ obo:HP_0040285 rdfs:label "Excluded (0%)"@en .
         format="turtle"
     )
 
-    assert len(actual_graph) == 21
+    assert len(actual_graph) == 19
     assert isomorphic(actual_graph, expect_graph)
 
 
 def test_write_manual_phenotype_association_ttl(tmp_path):
     output_path = tmp_path / "OMIM_HP_Association.ttl"
     source = disease_phenotype_association_util.create_annotation_source(
+        disease_phenotype_association_util.HPOA_SOURCE,
         "Human Phenotype Ontology Consortium",
-        disease_phenotype_association_util.HPOA_SOURCE_URI,
+        disease_phenotype_association_util.HPOA_PAGE,
     )
     manual_associations = {
         "619340\t0011097": "Manual",
@@ -243,6 +244,7 @@ def test_write_manual_phenotype_association_ttl(tmp_path):
         data=f"""
 PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX hpoa: <http://compbio.charite.de/jenkins/job/hpo.annotations.current/lastSuccessfulBuild/artifact/current/>
 PREFIX mim: <https://omim.org/entry/>
 PREFIX oa: <http://www.w3.org/ns/oa#>
 PREFIX obo: <http://purl.obolibrary.org/obo/>
@@ -253,28 +255,24 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     a oa:Annotation ;
     oa:hasTarget mim:619340 ;
     oa:hasBody obo:HP_0011097 ;
-    dcterms:source _:b1 ;
+    dcterms:source hpoa:phenotype.hpoa ;
     obo:ECO_9000001 obo:ECO_0000218 .
-
-_:b1
-    dcterms:creator "{source.creator}" ;
-    foaf:page <{source.page}> .
 
 <https://pubcasefinder.dbcls.jp/phenotype_context/disease:OMIM:619340/phenotype:HP:0002187>
     a oa:Annotation ;
     oa:hasTarget mim:619340 ;
     oa:hasBody obo:HP_0002187 ;
-    dcterms:source _:b2 ;
+    dcterms:source hpoa:phenotype.hpoa ;
     obo:ECO_9000001 obo:ECO_0000218 .
 
-_:b2
+hpoa:phenotype.hpoa
     dcterms:creator "{source.creator}" ;
     foaf:page <{source.page}> .
 """,
         format="turtle"
     )
 
-    assert len(actual_graph) == 14
+    assert len(actual_graph) == 12
     assert isomorphic(actual_graph, expect_graph)
 
 
