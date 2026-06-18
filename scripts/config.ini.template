@@ -31,7 +31,6 @@ panelsearch_manual_url=
 
 hpo_phenotype_path=
 hpo_phenotype_url=
-# TODO: データの取得元確認
 hpo_inheritance_path=
 hpo_inheritance_ja_path=
 # 以下リポジトリから最新のものをダウンロード
@@ -39,8 +38,6 @@ hpo_inheritance_ja_path=
 hpo_inheritance_url=
 hpo_japanese_path=
 
-# 以下から取得?
-# https://www.kegg.jp/kegg/download/
 kegg_disease_path=
 
 genereviews_omim_path=
