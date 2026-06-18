@@ -175,7 +175,7 @@ Data download and RDF conversion modules can also be run individually.
 
 ```bash
 # docker compose run --rm rdf_create_tools uv run python3 -m package.<module_name>
-docker compose run --rm rdf_create_tools uv run python3 -m package.disease_gene_nando
+docker compose run --rm rdf_create_tools python -m package.disease_gene_nando
 ```
 
 Useful module names include:
