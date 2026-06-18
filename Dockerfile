@@ -1,22 +1,16 @@
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 
-# uvのインストール: https://docs.astral.sh/uv/guides/integration/docker/#installing-uv
-COPY --from=ghcr.io/astral-sh/uv:0.11.8 /uv /uvx /bin/
-
-ENV VIRTUAL_ENV=/app/.venv
-RUN uv venv $VIRTUAL_ENV
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+# Installing uv: https://docs.astral.sh/uv/guides/integration/docker/#installing-uv
+COPY --from=ghcr.io/astral-sh/uv:0.11.20 /uv /uvx /bin/
 
 WORKDIR /app
 
-# パッケージのインストール
-COPY ./scripts/pyproject.toml ./scripts/uv.lock .
-RUN uv pip install --no-cache -r pyproject.toml
+# Installing dependencies
+RUN --mount=type=bind,source=scripts/uv.lock,target=uv.lock \
+  --mount=type=bind,source=scripts/pyproject.toml,target=pyproject.toml \
+  uv export --frozen --no-cache \
+  | uv pip install --system --no-cache -r -
 
 COPY ./scripts /app/
-
-
-# 仮想環境の有効化
-ENV PATH="/app/.venv/bin:$PATH"
 
 CMD ["/bin/bash"]
