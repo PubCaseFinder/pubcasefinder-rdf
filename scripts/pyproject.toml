@@ -1,7 +1,7 @@
 [project]
-name = "python"
+name = "pubcasefinder-rdf"
 version = "0.1.0"
-description = "Add your description here"
+description = "PubCaseFinder-RDF collects open-source disease, phenotype, and gene resources and converts them into RDF Turtle files for loading into the PubCaseFinder Virtuoso database."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
