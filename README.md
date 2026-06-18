@@ -10,8 +10,9 @@ The build has two stages.
 
 1. Optional data download
 
-   The Python workflow can download the following resources when the matching
-   `*_url` and output `*_path` values are set in `scripts/config.ini`.
+   The Python workflow downloads the following resources when the corresponding
+   `*_url` and `*_path` values are configured in scripts/config.ini.
+   Each `*_path` value is interpreted relative to the scripts directory.
 
    | Config key | Default source |
    | --- | --- |
