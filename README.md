@@ -22,7 +22,9 @@ The build has two stages.
    | `medgen_omim_hpo_url` | https://ftp.ncbi.nlm.nih.gov/pub/medgen/MedGen_HPO_OMIM_Mapping.txt.gz |
    | `mondo_owl_url` | https://purl.obolibrary.org/obo/mondo/mondo-international.owl |
    | `gencc_submissions_url` | https://thegencc.org/download/action/submissions-export-tsv |
+   | `panelsearch_manual_url` | https://dev-pubcasefinder.dbcls.jp/sparqlist/api/pcf_rdf_nando_gene_association |
    | `hpo_phenotype_url` | http://purl.obolibrary.org/obo/hp/phenotype.hpoa |
+   | `hpo_inheritance_url` | http://purl.obolibrary.org/obo/hp.owl |
    | `genereviews_omim_url` | https://ftp.ncbi.nlm.nih.gov/pub/GeneReviews/NBKid_shortname_OMIM.txt |
 
    Data that is not listed above must be downloaded manually and placed at the
@@ -139,9 +141,12 @@ HGNC:24086 A1CF               29974
    gencc_submissions_url=
    panelsearch_association_path=
    panelsearch_manual_path=
+   panelsearch_manual_url=
    hpo_phenotype_path=
    hpo_phenotype_url=
+   hpo_inheritance_path=
    hpo_inheritance_ja_path=
+   hpo_inheritance_url=
    hpo_japanese_path=
    kegg_disease_path=
    genereviews_omim_path=
