@@ -14,7 +14,7 @@ The build has two stages.
    `*_url` and `*_path` values are configured in scripts/config.ini.
    Each `*_path` value is interpreted relative to the scripts directory.
 
-   | Config key | Default source |
+   | Config key | Official source |
    | --- | --- |
    | `ncbi_gene_info_url` | https://ftp.ncbi.nlm.nih.gov/gene/DATA/GENE_INFO/Mammalia/Homo_sapiens.gene_info.gz |
    | `omim_mim2gene_data_url` | https://www.omim.org/static/omim/data/mim2gene.txt |
