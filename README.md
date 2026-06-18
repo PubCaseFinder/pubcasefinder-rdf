@@ -162,7 +162,7 @@ HGNC:24086 A1CF               29974
 5. Run the full RDF build.
 
    ```bash
-   docker compose run --rm rdf_create_tools uv run python3 main.py
+   docker compose run --rm rdf_create_tools python main.py
    ```
 
    The full build usually takes about 20 minutes. New Turtle files are written
