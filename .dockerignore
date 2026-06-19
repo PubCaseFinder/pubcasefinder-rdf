@@ -1,0 +1,12 @@
+scripts/__pycache__
+scripts/.pytest_cache
+scripts/.venv
+scripts/archives
+scipts/config.ini*
+scripts/java
+scripts/test
+*.exe
+
+
+virtuoso_data
+virtuoso_database

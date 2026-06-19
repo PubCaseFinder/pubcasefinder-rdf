@@ -1,0 +1,17 @@
+[project]
+name = "pubcasefinder-rdf"
+version = "0.1.0"
+description = "PubCaseFinder-RDF collects open-source disease, phenotype, and gene resources and converts them into RDF Turtle files for loading into the PubCaseFinder Virtuoso database."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "duckdb==1.5",
+    "rdflib==7.6",
+    "pytest==9.0.3",
+    "pytest-mock==3.15.1",
+    "chardet==7.4.3",
+    "fastobo==0.14.1"
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

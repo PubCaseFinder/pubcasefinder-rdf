@@ -1,0 +1,851 @@
+from pathlib import Path
+from rdflib import Graph, RDF, DCTERMS, Literal, URIRef
+
+from package import disease_gene_association_util
+
+ncbi_content = """\
+#tax_id	GeneID	Symbol	LocusTag	Synonyms	dbXrefs	chromosome	map_location	description	type_of_gene	Symbol_from_nomenclature_authority	Full_name_from_nomenclature_authority	Nomenclature_status	Other_designations	Modification_date	Feature_type
+9606	1	A1BG	-	A1B|ABG|GAB|HYST2477	MIM:138670|HGNC:HGNC:5|Ensembl:ENSG00000121410|AllianceGenome:HGNC:5	19	19q13.43	alpha-1-B glycoprotein	protein-coding	A1BG	alpha-1-B glycoprotein	O	alpha-1B-glycoprotein|HEL-S-163pA|epididymis secretory sperm binding protein Li 163pA	20251125	-
+9606	2	A2M	-	A2MD|CPAMD5|FWP007|S863-7	MIM:103950|HGNC:HGNC:7|Ensembl:ENSG00000175899|AllianceGenome:HGNC:7	12	12p13.31	alpha-2-macroglobulin	protein-coding	A2M	alpha-2-macroglobulin	O	alpha-2-macroglobulin|C3 and PZP-like alpha-2-macroglobulin domain-containing protein 5|alpha-2-M	20251125	-
+9606	9	NAT1	-	AAC1|MNAT|NAT-1|NATI	MIM:108345|HGNC:HGNC:7645|Ensembl:ENSG00000171428|AllianceGenome:HGNC:7645	8	8p22	N-acetyltransferase 1	protein-coding	NAT1	N-acetyltransferase 1	O	arylamine N-acetyltransferase 1|N-acetyltransferase 1 (arylamine N-acetyltransferase)|N-acetyltransferase type 1|arylamide acetylase 1|monomorphic arylamine N-acetyltransferase	20251125	-
+9606	10	NAT2	-	AAC2|NAT-2|PNAT	MIM:612182|HGNC:HGNC:7646|Ensembl:ENSG00000156006|AllianceGenome:HGNC:7646	8	8p22	N-acetyltransferase 2	protein-coding	NAT2	N-acetyltransferase 2	O	arylamine N-acetyltransferase 2|N-acetyltransferase 2 (arylamine N-acetyltransferase)|N-acetyltransferase type 2|N-hydroxyarylamine O-acetyltransferase|arylamide acetylase 2	20251125	-
+9606	11	NATP	-	AACP|NATP1	HGNC:HGNC:15|AllianceGenome:HGNC:15	8	8p22	N-acetyltransferase pseudogene	pseudo	NATP	N-acetyltransferase pseudogene	O	arylamide acetylase pseudogene	20251125	-
+"""
+
+# 実データではなく、意図的にncbi_contentとgene_curieがマッチするように修正してある
+hgnc_submission_content = """\
+"uuid"	"gene_curie"	"gene_symbol"	"disease_curie"	"disease_title"	"disease_original_curie"	"disease_original_title"	"classification_curie"	"classification_title"	"moi_curie"	"moi_title"	"submitter_curie"	"submitter_title"	"submitted_as_hgnc_id"	"submitted_as_hgnc_symbol"	"submitted_as_disease_id"	"submitted_as_disease_name"	"submitted_as_moi_id"	"submitted_as_moi_name"	"submitted_as_submitter_id"	"submitted_as_submitter_name"	"submitted_as_classification_id"	"submitted_as_classification_name"	"submitted_as_date"	"submitted_as_public_report_url"	"submitted_as_notes"	"submitted_as_pmids"	"submitted_as_assertion_criteria_url"	"submitted_as_submission_id"	"submitted_run_date"
+"GENCC_000101-HGNC_10896-OMIM_182212-HP_0000006-GENCC_100001"	"HGNC:5"	"SKI"	"MONDO:0008426"	"Shprintzen-Goldberg syndrome"	"OMIM:182212"	"Shprintzen-Goldberg syndrome"	"GENCC:100001"	"Definitive"	"HP:0000006"	"Autosomal dominant"	"GENCC:000101"	"Ambry Genetics"	"HGNC:10896"	"SKI"	"OMIM:182212"	"Shprintzen-Goldberg syndrome"	"HP:0000006"	"Autosomal dominant inheritance"	"GENCC:000101"	"Ambry Genetics"	"GENCC:100001"	"Definitive"	"2018-03-30 13:31:56"	""	""	""	"PMID: 28106320"	"1034"	"2020-12-24"
+"GENCC_000101-HGNC_16636-OMIM_171300-HP_0000006-GENCC_100003"	"HGNC:7"	"KIF1B"	"MONDO:0008233"	"pheochromocytoma"	"OMIM:171300"	"{Pheochromocytoma, susceptibility to}"	"GENCC:100003"	"Moderate"	"HP:0000006"	"Autosomal dominant"	"GENCC:000101"	"Ambry Genetics"	"HGNC:16636"	"KIF1B"	"OMIM:171300"	"Pheochromocytoma"	"HP:0000006"	"Autosomal dominant inheritance"	"GENCC:000101"	"Ambry Genetics"	"GENCC:100003"	"Moderate"	"2019-12-04 13:30:43"	""	""	""	"PMID: 28106320"	"69237"	"2020-12-24"
+"GENCC_000101-HGNC_16636-OMIM_118210-HP_0000006-GENCC_100004"	"HGNC:7645"	"KIF1B"	"MONDO:0007308"	"Charcot-Marie-Tooth disease type 2A1"	"OMIM:118210"	"Charcot-Marie-Tooth disease, type 2A1"	"GENCC:100004"	"Limited"	"HP:0000006"	"Autosomal dominant"	"GENCC:000101"	"Ambry Genetics"	"HGNC:16636"	"KIF1B"	"OMIM:118210"	"Charcot-Marie-Tooth disease, type 2A1"	"HP:0000006"	"Autosomal dominant inheritance"	"GENCC:000101"	"Ambry Genetics"	"GENCC:100004"	"Limited"	"2024-10-15 12:08:25"	""	""	""	"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5655771/"	"61327"	"2025-01-17"
+"GENCC_000101-HGNC_17939-OMIM_617532-HP_0000007-GENCC_100004"	"HGNC:15"	"SLC45A1"	"MONDO:0044322"	"intellectual developmental disorder with neuropsychiatric features"	"OMIM:617532"	"Intellectual developmental disorder with neuropsychiatric features"	"GENCC:100004"	"Limited"	"HP:0000007"	"Autosomal recessive"	"GENCC:000101"	"Ambry Genetics"	"HGNC:17939"	"SLC45A1"	"OMIM:617532"	"Intellectual developmental disorder with neuropsychiatric features"	"HP:0000007"	"Autosomal recessive inheritance"	"GENCC:000101"	"Ambry Genetics"	"GENCC:100004"	"Limited"	"2024-09-26 12:08:38"	""	""	""	"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5655771/"	"17305"	"2025-01-17"
+"""
+
+mondo_owl_content = """\
+<?xml version="1.0"?>
+<rdf:RDF
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:skos="http://www.w3.org/2004/02/skos/core#">
+    <owl:Class rdf:about="http://purl.obolibrary.org/obo/MONDO_0008426">
+        <skos:exactMatch rdf:resource="https://omim.org/entry/182212"/>
+        <skos:exactMatch rdf:resource="http://www.orpha.net/ORDO/Orphanet_2462"/>
+        <skos:exactMatch rdf:resource="http://identifiers.org/mesh/D004194"/>
+    </owl:Class>
+    <owl:Class rdf:about="http://purl.obolibrary.org/obo/MONDO_0008233">
+        <skos:exactMatch rdf:resource="https://omim.org/entry/171300"/>
+    </owl:Class>
+    <owl:Class rdf:about="http://purl.obolibrary.org/obo/MONDO_9999999">
+        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <skos:exactMatch rdf:resource="https://omim.org/entry/999999"/>
+        <skos:exactMatch rdf:resource="http://www.orpha.net/ORDO/Orphanet_999999"/>
+    </owl:Class>
+</rdf:RDF>
+"""
+
+mim2gen__medgen_content = """\
+#MIM number	GeneID	type	Source	MedGenCUI	Comment
+100050	-	phenotype	-	C3149220	-
+100070	-	phenotype	-	C1853365	-
+100100	1131	phenotype	 GeneMap	C0033770	-
+100200	-	phenotype	-	C4551519	-
+100300	57514	phenotype	 GeneMap	C4551482	-
+100600	-	phenotype	-	C2930792	-
+100640	216	gene	-	-	-
+"""
+
+orphanet_product6_content = """\
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<JDBOR date="2021-12-01 04:54:36" version="1.3.14 / 4.1.7 [2021-06-23] (orientdb version)" copyright="Orphanet (c) 2021" dbserver="jdbc:sybase:Tds:canard.orpha.net:2020">
+  <Availability> 
+    <Licence>
+      <FullName lang="en">Creative Commons Attribution 4.0 International</FullName>
+      <ShortIdentifier>CC-BY-4.0</ShortIdentifier>
+      <LegalCode>https://creativecommons.org/licenses/by/4.0/legalcode</LegalCode>
+    </Licence>
+  </Availability>
+  <DisorderList count="3884">
+    <Disorder id="17601">
+      <OrphaCode>166024</OrphaCode>
+      <ExpertLink lang="en">http://www.orpha.net/consor/cgi-bin/OC_Exp.php?lng=en&amp;Expert=166024</ExpertLink>
+      <Name lang="en">Multiple epiphyseal dysplasia, Al-Gazali type</Name>
+      <DisorderType id="21394">
+        <Name lang="en">Disease</Name>
+      </DisorderType>
+      <DisorderGroup id="36547">
+        <Name lang="en">Disorder</Name>
+      </DisorderGroup>
+      <DisorderGeneAssociationList count="1">
+        <DisorderGeneAssociation>
+          <SourceOfValidation>22587682[PMID]</SourceOfValidation>
+          <Gene id="20160">
+            <Name lang="en">kinesin family member 7</Name>
+            <Symbol>NAT2</Symbol>
+            <SynonymList count="1">
+              <Synonym lang="en">JBTS12</Synonym>
+            </SynonymList>
+            <GeneType id="25993">
+              <Name lang="en">gene with protein product</Name>
+            </GeneType>
+            <ExternalReferenceList count="6">
+              <ExternalReference id="57240">
+                <Source>Ensembl</Source>
+                <Reference>ENSG00000166813</Reference>
+              </ExternalReference>
+              <ExternalReference id="51758">
+                <Source>Genatlas</Source>
+                <Reference>KIF7</Reference>
+              </ExternalReference>
+              <ExternalReference id="51756">
+                <Source>HGNC</Source>
+                <Reference>30497</Reference>
+              </ExternalReference>
+              <ExternalReference id="51757">
+                <Source>OMIM</Source>
+                <Reference>611254</Reference>
+              </ExternalReference>
+              <ExternalReference id="97306">
+                <Source>Reactome</Source>
+                <Reference>Q2M1P5</Reference>
+              </ExternalReference>
+              <ExternalReference id="51759">
+                <Source>SwissProt</Source>
+                <Reference>Q2M1P5</Reference>
+              </ExternalReference>
+            </ExternalReferenceList>
+            <LocusList count="1">
+              <Locus id="16859">
+                <GeneLocus>15q26.1</GeneLocus>
+                <LocusKey>1</LocusKey>
+              </Locus>
+            </LocusList>
+          </Gene>
+          <DisorderGeneAssociationType id="17949">
+            <Name lang="en">Disease-causing germline mutation(s) in</Name>
+          </DisorderGeneAssociationType>
+          <DisorderGeneAssociationStatus id="17991">
+            <Name lang="en">Assessed</Name>
+          </DisorderGeneAssociationStatus>
+        </DisorderGeneAssociation>
+      </DisorderGeneAssociationList>
+    </Disorder>
+  </DisorderList>
+</JDBOR>
+"""
+
+def mock_load_hgnc_to_ncbi_map(_path):
+    return {
+        '5': '1',
+        '7': '2',
+        '7645': '9',
+        '7646': '10',
+        '15': '11'
+    }
+
+def mock_load_mondo_mapping_from_owl(_path):
+    return disease_gene_association_util.MondoMapping(
+        mondo_to_omim = {
+            '0008426': ['182212'],
+            '0008233': ['171300'],
+        },
+        mondo_to_orpha = {
+            '0008426': ['2462'],
+        },
+        omim_to_mondo = {
+            '182212': ['0008426'],
+            '171300': ['0008233'],
+        },
+        orpha_to_mondo = {
+            '2462': ['0008426'],
+        }
+    )
+
+def mock_load_ncbi_gene_symbol_map(_path):
+    return {
+        'A1BG': '1',
+        'A2M': '2',
+        'NAT1': '9',
+        'NAT2': '10',
+        'NATP': '11',
+    }
+
+def create_mock_file(path: str, content: str):
+    source_path = Path(path)
+    source_path.parent.mkdir(parents=True, exist_ok=True)
+    source_path.touch()
+    source_path.write_text(content)
+
+def test_load_ncbi_gene_symbol_map(tmp_path):
+    ncbi_gene_path = (tmp_path / 'Homo_sapiens.gene_info').as_posix()
+    create_mock_file(ncbi_gene_path, ncbi_content)
+    ncbi_gene_symbol_map = disease_gene_association_util.load_ncbi_gene_symbol_map(ncbi_gene_path)
+    expect_ncbi_gene_symbol_map = {
+        'A1BG': '1',
+        'A2M': '2',
+        'NAT1': '9',
+        'NAT2': '10',
+        'NATP': '11',
+    }
+    assert ncbi_gene_symbol_map == expect_ncbi_gene_symbol_map
+
+def test_load_hgnc_to_ncbi_map(tmp_path):
+    ncbi_file_path = (tmp_path / 'Homo_sapiens.gene_info').as_posix()
+    create_mock_file(ncbi_file_path, ncbi_content)
+
+    hgnc_to_ncbi_map = disease_gene_association_util.load_hgnc_to_ncbi_map(ncbi_file_path)
+
+    expect_hgnc_to_ncbi_map = {
+        '5': '1',
+        '7': '2',
+        '7645': '9',
+        '7646': '10',
+        '15': '11'
+    }
+
+    assert hgnc_to_ncbi_map == expect_hgnc_to_ncbi_map
+
+def test_load_gencc_submission_records(mocker, tmp_path):
+    ncbi_file_path = (tmp_path / 'Homo_sapiens.gene_info').as_posix()
+    hgnc_submission_path = (tmp_path / 'gencc-submissions.tsv').as_posix()
+    create_mock_file(hgnc_submission_path, hgnc_submission_content)
+
+    mocker.patch.object(disease_gene_association_util, 'load_hgnc_to_ncbi_map', mock_load_hgnc_to_ncbi_map)
+    records = disease_gene_association_util.load_gencc_submission_records(hgnc_submission_path, ncbi_file_path)
+
+    expect_records = [
+        disease_gene_association_util.GenCCSubmissionRecord(
+            association_uri=disease_gene_association_util.GENE_CONTEXT[
+                'disease:OMIM:182212/gene:ENT:1'
+            ],
+            disease_uri=disease_gene_association_util.MIM['182212'],
+            gene_uri=disease_gene_association_util.NCBIGENE['1'],
+            submission_uri=disease_gene_association_util.GENCC[
+                'GENCC_000101-HGNC_10896-OMIM_182212-HP_0000006-GENCC_100001'
+            ],
+            classification_title='Definitive',
+            inheritance_uri=disease_gene_association_util.OBO['HP_0000006'],
+            submitter_label='Ambry Genetics',
+        ),
+        disease_gene_association_util.GenCCSubmissionRecord(
+            association_uri=disease_gene_association_util.GENE_CONTEXT[
+                'disease:OMIM:171300/gene:ENT:2'
+            ],
+            disease_uri=disease_gene_association_util.MIM['171300'],
+            gene_uri=disease_gene_association_util.NCBIGENE['2'],
+            submission_uri=disease_gene_association_util.GENCC[
+                'GENCC_000101-HGNC_16636-OMIM_171300-HP_0000006-GENCC_100003'
+            ],
+            classification_title='Moderate',
+            inheritance_uri=disease_gene_association_util.OBO['HP_0000006'],
+            submitter_label='Ambry Genetics',
+        ),
+        disease_gene_association_util.GenCCSubmissionRecord(
+            association_uri=disease_gene_association_util.GENE_CONTEXT[
+                'disease:OMIM:118210/gene:ENT:9'
+            ],
+            disease_uri=disease_gene_association_util.MIM['118210'],
+            gene_uri=disease_gene_association_util.NCBIGENE['9'],
+            submission_uri=disease_gene_association_util.GENCC[
+                'GENCC_000101-HGNC_16636-OMIM_118210-HP_0000006-GENCC_100004'
+            ],
+            classification_title='Limited',
+            inheritance_uri=disease_gene_association_util.OBO['HP_0000006'],
+            submitter_label='Ambry Genetics',
+        ),
+        disease_gene_association_util.GenCCSubmissionRecord(
+            association_uri=disease_gene_association_util.GENE_CONTEXT[
+                'disease:OMIM:617532/gene:ENT:11'
+            ],
+            disease_uri=disease_gene_association_util.MIM['617532'],
+            gene_uri=disease_gene_association_util.NCBIGENE['11'],
+            submission_uri=disease_gene_association_util.GENCC[
+                'GENCC_000101-HGNC_17939-OMIM_617532-HP_0000007-GENCC_100004'
+            ],
+            classification_title='Limited',
+            inheritance_uri=disease_gene_association_util.OBO['HP_0000007'],
+            submitter_label='Ambry Genetics',
+        ),
+    ]
+
+    assert records == expect_records
+
+def test_load_orphanet_gene_associations(mocker, tmp_path):
+    ncbi_gene_path = (tmp_path / 'Homo_sapiens.gene_info').as_posix()
+    orphanet_xml_path = (tmp_path / 'en_product6.xml').as_posix()
+    create_mock_file(orphanet_xml_path, orphanet_product6_content)
+    mocker.patch.object(disease_gene_association_util, 'load_ncbi_gene_symbol_map', mock_load_ncbi_gene_symbol_map)
+
+    associations = disease_gene_association_util.load_orphanet_gene_associations(
+        ncbi_gene_path,
+        orphanet_xml_path
+    )
+    expect_associations = {
+        '166024\t10': ['Orphanet']
+    }
+
+    assert associations == expect_associations
+
+def test_load_omim_gene_associations(tmp_path):
+    mim2gen__medgen_path = (tmp_path / 'mim2gene_medgen.txt').as_posix()
+    create_mock_file(mim2gen__medgen_path, mim2gen__medgen_content)
+    associations = disease_gene_association_util.load_omim_gene_associations(mim2gen__medgen_path)
+    expect_associations = {
+        '100100\t1131': ['MedGen'],
+        '100300\t57514': ['MedGen'],
+    }
+    assert associations == expect_associations
+
+def test_load_gencc_definitive_associations(mocker):
+    expect_associations = disease_gene_association_util.GenCCAssociations(
+        mondo_associations={
+            '0008426\t1': ['GenCC'],
+        }
+    )
+
+    def mock_load_gencc_associations(
+        ncbigene_gene_info_path,
+        mondo_owl_path,
+        gencc_submissions_path,
+        allowed_classification_curies,
+        *,
+        project_mondo_to_mapped_diseases,
+    ):
+        assert ncbigene_gene_info_path == 'gene_info'
+        assert mondo_owl_path == 'mondo.owl'
+        assert gencc_submissions_path == 'gencc.tsv'
+        assert allowed_classification_curies == {'GENCC:100001'}
+        assert project_mondo_to_mapped_diseases is True
+        return expect_associations
+
+    mocker.patch.object(
+        disease_gene_association_util,
+        'load_gencc_associations',
+        mock_load_gencc_associations
+    )
+
+    associations = disease_gene_association_util.load_gencc_definitive_associations(
+        'gene_info',
+        'mondo.owl',
+        'gencc.tsv'
+    )
+
+    assert associations == expect_associations
+
+def test_load_gencc_associations(mocker, tmp_path):
+    ncbigene_gene_info_path = (tmp_path / 'Homo_sapiens.gene_info').as_posix()
+    mondo_owl_path = (tmp_path / 'mondo-international.owl').as_posix()
+    gencc_submissions_path = (tmp_path / 'gencc-submissions.tsv').as_posix()
+
+    mocker.patch.object(disease_gene_association_util, 'load_hgnc_to_ncbi_map', mock_load_hgnc_to_ncbi_map)
+    mocker.patch.object(disease_gene_association_util, 'load_mondo_mapping_from_owl', mock_load_mondo_mapping_from_owl)
+
+    create_mock_file(ncbigene_gene_info_path, '')
+    create_mock_file(mondo_owl_path, '')
+    create_mock_file(gencc_submissions_path, hgnc_submission_content)
+
+    associations = disease_gene_association_util.load_gencc_associations(
+        ncbigene_gene_info_path,
+        mondo_owl_path,
+        gencc_submissions_path,
+        {"GENCC:100001"},
+        project_mondo_to_mapped_diseases=True
+    )
+
+    assert associations.omim_associations == {
+        '182212\t1': ['GenCC'],
+    }
+    assert associations.orphanet_associations == {
+        '2462\t1': ['GenCC'],
+    }
+    assert associations.mondo_associations == {
+        '0008426\t1': ['GenCC'],
+    }
+
+def test_add_original_disease_association():
+    associations = disease_gene_association_util.GenCCAssociations()
+    cases = [
+        {
+            'ncbi_id': '2103',
+            'original_disease_curie': 'OMIM:608565',
+        },
+        {
+            'ncbi_id': '83636',
+            'original_disease_curie': 'Orphanet:289560',
+        },
+        {
+            'ncbi_id': '652',
+            'original_disease_curie': 'MONDO:0100613',
+        }
+    ]
+    for case in cases:
+        disease_gene_association_util.add_original_disease_association(
+            associations,
+            case['ncbi_id'],
+            case['original_disease_curie']
+        )
+
+    assert associations.mondo_associations == {
+        '0100613\t652': ['GenCC'],
+    }
+    assert associations.omim_associations == {
+        '608565\t2103': ['GenCC'],
+    }
+    assert associations.orphanet_associations == {
+        '289560\t83636': ['GenCC'],
+    }
+
+def test_load_mondo_mapping_from_owl(tmp_path):
+    mondo_owl_path = (tmp_path / 'mondo-international.owl').as_posix()
+    create_mock_file(mondo_owl_path, mondo_owl_content)
+
+    mapping = disease_gene_association_util.load_mondo_mapping_from_owl(mondo_owl_path)
+
+    assert mapping.mondo_to_omim == {
+        '0008426': ['182212'],
+        '0008233': ['171300'],
+    }
+    assert mapping.mondo_to_orpha == {
+        '0008426': ['2462'],
+    }
+    assert mapping.omim_to_mondo == {
+        '182212': ['0008426'],
+        '171300': ['0008233'],
+    }
+    assert mapping.orpha_to_mondo == {
+        '2462': ['0008426'],
+    }
+
+def test_project_gene_to_mapped_diseases():
+    associations = {
+        '182212\t1': ['GenCC'],
+    }
+    mondo_mapping = {
+        '0008426': ['182212', '182213'],
+    }
+
+    disease_gene_association_util.project_gene_to_mapped_diseases(
+        associations,
+        mondo_mapping,
+        '0008426',
+        '1',
+        'MedGen'
+    )
+    disease_gene_association_util.project_gene_to_mapped_diseases(
+        associations,
+        mondo_mapping,
+        '0000000',
+        '2',
+        'MedGen'
+    )
+
+    assert associations == {
+        '182212\t1': ['GenCC', 'MedGen'],
+        '182213\t1': ['MedGen'],
+    }
+
+def test_merge_association_maps():
+    mock_source_map = disease_gene_association_util.AssociationMap({
+        '0008426\t1': ['GenCC'],
+    })
+    mock_target_map = disease_gene_association_util.AssociationMap({
+        '0008426\t6497': ['MedGen', 'Orphanet'],
+        '0008233\t23095': ['MedGen'],
+        '0008233\t4149': ['MedGen'],
+        '0008233\t55654': ['MedGen'],
+        '0008233\t5979': ['MedGen'],
+        '0008233\t7428': ['MedGen'],
+    })
+    disease_gene_association_util.merge_association_maps(mock_target_map, mock_source_map)
+    expect_result_map = disease_gene_association_util.AssociationMap({
+        '0008426\t1': ['GenCC'],
+        '0008426\t6497': ['MedGen', 'Orphanet'],
+        '0008233\t23095': ['MedGen'],
+        '0008233\t4149': ['MedGen'],
+        '0008233\t55654': ['MedGen'],
+        '0008233\t5979': ['MedGen'],
+        '0008233\t7428': ['MedGen'],
+    })
+    assert mock_target_map == expect_result_map
+
+def test_merge_associations_from_tsv(mocker, tmp_path):
+    path = (tmp_path / 'nando.tsv').as_posix()
+    associations = disease_gene_association_util.AssociationMap()
+    def mock_check_file_char_code(_path):
+        content = """
+Label	NANDO	Symbol	GeneID
+先天性筋無力症候群	1200021	RAPSN	5913
+先天性筋無力症候群	1200021	SCN4A	6329
+?取り空胞を伴う遠位型ミオパチ?	1200218	GNE	10020
+ベスレムミオパチ?	1200220	COL6A1	1291
+過?自己貪食を伴うＸ連鎖性ミオパチ?	1200223	VMA21	203547
+先天性ミオパチ?	1200477	ACTA1	58
+"""
+        create_mock_file(path, content)
+        return path
+
+    mocker.patch.object(disease_gene_association_util, 'check_file_char_code', mock_check_file_char_code)
+    stats = disease_gene_association_util.merge_associations_from_tsv(
+        path,
+        associations,
+        'NANDO',
+        'GeneID',
+        'PanelSearch'
+    )
+    expect_associations = disease_gene_association_util.AssociationMap({
+        '1200021\t5913': ['PanelSearch'],
+        '1200021\t6329': ['PanelSearch'],
+        '1200218\t10020': ['PanelSearch'],
+        '1200220\t1291': ['PanelSearch'],
+        '1200223\t203547': ['PanelSearch'],
+        '1200477\t58': ['PanelSearch'],
+    })
+    assert stats.added == 6
+    assert stats.overlap == 0
+    assert associations == expect_associations
+
+
+def test_check_file_char_code(tmp_path):
+    character_codes = {
+        'cp949': Path((tmp_path / 'cp949_file_utf8.txt').as_posix()),
+        'utf-8': Path((tmp_path / 'utf-8_file.txt').as_posix()),
+        'cp932': None,
+    }
+    for code, expect_result in character_codes.items():
+        path = f'{tmp_path}/{code}_file.txt'
+        Path(path).write_text('今日の芸術', encoding=code)
+        result = disease_gene_association_util.check_file_char_code(path)
+        assert result == expect_result
+        if result is not None:
+            with open(result) as f:
+                assert f.readline() == '今日の芸術'
+
+def test_create_utf8_file(tmp_path):
+    utf8_path = tmp_path / 'utf8.txt'
+    utf8_path.write_text('hello', encoding='utf-8')
+
+    assert disease_gene_association_util.create_utf8_file(utf8_path, 'utf-8') == utf8_path
+
+    cp949_path = tmp_path / 'cp949.txt'
+    cp949_path.write_text('hello', encoding='cp949')
+
+    result = disease_gene_association_util.create_utf8_file(cp949_path, 'CP949')
+
+    assert Path(result).name == 'cp949_utf8.txt'
+    assert Path(result).read_text(encoding='utf-8') == 'hello'
+    assert disease_gene_association_util.create_utf8_file(cp949_path, None) is None
+
+def test_add_projected_mondo_associations():
+    mondo_ncbi_gene_map: disease_gene_association_util.AssociationMap = {}
+    omim_ncbi_gene_map = {
+        '182212\t1': ['MedGen'],
+        '171300\t2': ['MedGen'],
+    }
+    mondo_mappping = mock_load_mondo_mapping_from_owl(None)
+
+    disease_gene_association_util.add_projected_mondo_associations(
+        mondo_ncbi_gene_map,
+        omim_ncbi_gene_map,
+        mondo_mappping.omim_to_mondo,
+    )
+
+    expect_mondo_ncbi_gene_map = {
+        '0008426\t1': ['MedGen'],
+        '0008233\t2': ['MedGen']
+    }
+
+    assert mondo_ncbi_gene_map == expect_mondo_ncbi_gene_map
+
+def test_build_mondo_gene_associations(mocker, tmp_path):
+
+    # | ncbi  | mondo  | omim   | ordo | source          |
+    # | ----- | ------ | ------ | ---- | --------------- |
+    # | 1     | 008426 | 182212 | 2462 | GenCC,          |
+    # |       | 008233 | 171300 |      | (mapping)       |
+    # | 6497  |        | 182212 | 2462 | MedGen,Orphanet |
+    # | 23095 |        | 171300 |      | MedGen,         |
+    # | 4149  |        | 171300 |      | MedGen,         |
+    # | 55654 |        | 171300 |      | MedGen,         |
+    # | 5979  |        | 171300 |      | MedGen,         |
+    # | 7428  |        | 171300 |      | MedGen,         |
+
+    def mock_load_gencc_definitive_associations(_path, _path_1, _path_2):
+        return disease_gene_association_util.GenCCAssociations(
+            omim_associations = {'182212\t1': ['GenCC']},
+            orphanet_associations = {'2462\t1': ['GenCC']},
+            mondo_associations = {'0008426\t1': ['GenCC']}
+        )
+    def mock_load_omim_gene_associations(_path):
+        return disease_gene_association_util.AssociationMap({
+            '182212\t6497': ['MedGen'],
+            '171300\t23095': ['MedGen'],
+            '171300\t4149': ['MedGen'],
+            '171300\t55654': ['MedGen'],
+            '171300\t5979': ['MedGen'],
+            '171300\t7428': ['MedGen'],
+        })
+    def mock_load_orphanet_gene_associations(_path, _path_1):
+        return disease_gene_association_util.AssociationMap({
+            '2462\t6497': ['Orphanet']
+        })
+    mocker.patch.object(disease_gene_association_util, 'load_gencc_definitive_associations', mock_load_gencc_definitive_associations)
+    mocker.patch.object(disease_gene_association_util, 'load_mondo_mapping_from_owl', mock_load_mondo_mapping_from_owl)
+    mocker.patch.object(disease_gene_association_util, 'load_omim_gene_associations', mock_load_omim_gene_associations)
+    mocker.patch.object(disease_gene_association_util, 'load_orphanet_gene_associations', mock_load_orphanet_gene_associations)
+
+    mondo_ncbi_gene_map = disease_gene_association_util.build_mondo_gene_associations(
+        tmp_path,
+        tmp_path,
+        tmp_path,
+        tmp_path,
+        tmp_path
+    )
+    expect_mondo_ncbi_gene_map = disease_gene_association_util.AssociationMap({
+        '0008426\t1': ['GenCC'],
+        '0008426\t6497': ['MedGen', 'Orphanet'],
+        '0008233\t23095': ['MedGen'],
+        '0008233\t4149': ['MedGen'],
+        '0008233\t55654': ['MedGen'],
+        '0008233\t5979': ['MedGen'],
+        '0008233\t7428': ['MedGen'],
+    })
+    assert mondo_ncbi_gene_map == expect_mondo_ncbi_gene_map
+
+def test_add_association():
+    associations = disease_gene_association_util.AssociationMap({
+        '0008426\t6497': ['MedGen']
+    })
+    disease_gene_association_util.add_association(
+        associations,
+        '0008426',
+        '6497',
+        'Orphanet'
+    )
+    disease_gene_association_util.add_association(
+        associations,
+        '171300',
+        '23095',
+        'MedGen'
+    )
+    assert associations == disease_gene_association_util.AssociationMap({
+        '0008426\t6497': ['MedGen', 'Orphanet'],
+        '171300\t23095': ['MedGen']
+    })
+
+def test_write_gene_association_ttl(tmp_path):
+    output_path = tmp_path / 'MONDO_Gene_Association.ttl'
+    associations = disease_gene_association_util.AssociationMap({
+        '0008426\t6497': ['MedGen', 'Orphanet'],
+    })
+    source_uri_map = {
+        'MedGen': URIRef('ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/mim2gene_medgen'),
+        'Orphanet': URIRef('http://www.orphadata.org/data/xml/en_product6.xml'),
+    }
+
+    disease_gene_association_util.write_gene_association_ttl(
+        output_path=output_path,
+        associations=associations,
+        disease_context_prefix='MONDO',
+        disease_namespace_prefix='obo',
+        disease_namespace=disease_gene_association_util.OBO,
+        disease_id_prefix='MONDO_',
+        source_uri_map=source_uri_map,
+    )
+
+    graph = Graph()
+    graph.parse(output_path, format='turtle')
+
+    association_uri = disease_gene_association_util.GENE_CONTEXT[
+        'disease:MONDO:0008426/gene:ENT:6497'
+    ]
+    assert (association_uri, RDF.type, disease_gene_association_util.SIO['SIO_000983']) in graph
+    assert (
+        association_uri,
+        disease_gene_association_util.SIO['SIO_000628'],
+        disease_gene_association_util.OBO['MONDO_0008426'],
+    ) in graph
+    assert (
+        association_uri,
+        disease_gene_association_util.SIO['SIO_000628'],
+        disease_gene_association_util.NCBIGENE['6497'],
+    ) in graph
+    assert (
+        association_uri,
+        DCTERMS.source,
+        URIRef('ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/mim2gene_medgen'),
+    ) in graph
+    assert (
+        association_uri,
+        DCTERMS.source,
+        URIRef('http://www.orphadata.org/data/xml/en_product6.xml'),
+    ) in graph
+
+def test_write_gencc_gene_association_ttl(tmp_path):
+    output_path = Path(tmp_path)
+    output_path.mkdir(parents=True, exist_ok=True)
+    mock_records = [
+        disease_gene_association_util.GenCCSubmissionRecord(
+            association_uri=disease_gene_association_util.GENE_CONTEXT[
+                'disease:OMIM:182212/gene:ENT:1'
+            ],
+            disease_uri=disease_gene_association_util.MIM['182212'],
+            gene_uri=disease_gene_association_util.NCBIGENE['1'],
+            submission_uri=disease_gene_association_util.GENCC[
+                'GENCC_000101-HGNC_10896-OMIM_182212-HP_0000006-GENCC_100001'
+            ],
+            classification_title='Definitive',
+            inheritance_uri=disease_gene_association_util.OBO['HP_0000006'],
+            submitter_label='Ambry Genetics',
+        ),
+        disease_gene_association_util.GenCCSubmissionRecord(
+            association_uri=disease_gene_association_util.GENE_CONTEXT[
+                'disease:OMIM:171300/gene:ENT:2'
+            ],
+            disease_uri=disease_gene_association_util.MIM['171300'],
+            gene_uri=disease_gene_association_util.NCBIGENE['2'],
+            submission_uri=disease_gene_association_util.GENCC[
+                'GENCC_000101-HGNC_16636-OMIM_171300-HP_0000006-GENCC_100003'
+            ],
+            classification_title='Moderate',
+            inheritance_uri=disease_gene_association_util.OBO['HP_0000006'],
+            submitter_label='Ambry Genetics',
+        ),
+        disease_gene_association_util.GenCCSubmissionRecord(
+            association_uri=disease_gene_association_util.GENE_CONTEXT[
+                'disease:OMIM:118210/gene:ENT:9'
+            ],
+            disease_uri=disease_gene_association_util.MIM['118210'],
+            gene_uri=disease_gene_association_util.NCBIGENE['9'],
+            submission_uri=disease_gene_association_util.GENCC[
+                'GENCC_000101-HGNC_16636-OMIM_118210-HP_0000006-GENCC_100004'
+            ],
+            classification_title='Limited',
+            inheritance_uri=disease_gene_association_util.OBO['HP_0000006'],
+            submitter_label='Ambry Genetics',
+        ),
+        disease_gene_association_util.GenCCSubmissionRecord(
+            association_uri=disease_gene_association_util.GENE_CONTEXT[
+                'disease:OMIM:617532/gene:ENT:11'
+            ],
+            disease_uri=disease_gene_association_util.MIM['617532'],
+            gene_uri=disease_gene_association_util.NCBIGENE['11'],
+            submission_uri=disease_gene_association_util.GENCC[
+                'GENCC_000101-HGNC_17939-OMIM_617532-HP_0000007-GENCC_100004'
+            ],
+            classification_title='Limited',
+            inheritance_uri=disease_gene_association_util.OBO['HP_0000007'],
+            submitter_label='Ambry Genetics',
+        ),
+    ]
+    output_path = Path((output_path / 'GenCC_Gene_Association.ttl').as_posix())
+    disease_gene_association_util.write_gencc_gene_association_ttl(
+        output_path,
+        mock_records
+    )
+
+    expect_rdf_map = {
+        RDF.type: [disease_gene_association_util.SIO["SIO_000983"]],
+        disease_gene_association_util.SIO["SIO_000628"]: [ disease_gene_association_util.MIM['171300'], disease_gene_association_util.NCBIGENE['2']],
+        DCTERMS.source: [disease_gene_association_util.GENCC['GENCC_000101-HGNC_16636-OMIM_171300-HP_0000006-GENCC_100003']],
+        disease_gene_association_util.OBO["IAO_0000114"]: [Literal('Moderate')]
+    }
+
+    g = Graph()
+    g.parse(output_path, format='turtle')
+    query_statement = """
+PREFIX sio: <http://semanticscience.org/resource/>
+select ?p ?o
+where {
+    <https://pubcasefinder.dbcls.jp/gene_context/disease:OMIM:171300/gene:ENT:2> ?p ?o .
+}
+"""
+
+    rows = g.query(query_statement)
+
+    for row in rows:
+        key = row[0]
+        value = row[1]
+
+        assert value in expect_rdf_map[key]
+
+def test_extract_hgnc_id():
+    assert disease_gene_association_util.extract_hgnc_id(
+        'MIM:138670|HGNC:HGNC:5|Ensembl:ENSG00000121410'
+    ) == '5'
+    assert disease_gene_association_util.extract_hgnc_id('HGNC:7') == '7'
+    assert disease_gene_association_util.extract_hgnc_id(None) is None
+    assert disease_gene_association_util.extract_hgnc_id('MIM:138670') is None
+
+def test_normalize_value():
+    assert disease_gene_association_util.normalize_value(' "MONDO:0008426" ') == 'MONDO:0008426'
+    assert disease_gene_association_util.normalize_value('OMIM:182212') == 'OMIM:182212'
+    assert disease_gene_association_util.normalize_value(None) is None
+
+def test_normalize_curie_value():
+    assert disease_gene_association_util.normalize_curie_value(' "HGNC:5" ', 'HGNC:') == '5'
+    assert disease_gene_association_util.normalize_curie_value('OMIM:182212', 'HGNC:') == 'OMIM:182212'
+    assert disease_gene_association_util.normalize_curie_value(None, 'HGNC:') == ''
+
+def test_resolve_gencc_submitter_label():
+    assert disease_gene_association_util.resolve_gencc_submitter_label('GENCC:000101') == 'Ambry Genetics'
+    assert disease_gene_association_util.resolve_gencc_submitter_label('GENCC:999999') == 'GENCC:999999'
+    assert disease_gene_association_util.resolve_gencc_submitter_label(None) == ''
+
+def test_to_gencc_disease_reference():
+    assert disease_gene_association_util.to_gencc_disease_reference('OMIM:182212') == (
+        'OMIM:182212',
+        disease_gene_association_util.MIM['182212'],
+    )
+    assert disease_gene_association_util.to_gencc_disease_reference('Orphanet:2462') == (
+        'ORDO:2462',
+        disease_gene_association_util.ORDO['Orphanet_2462'],
+    )
+    assert disease_gene_association_util.to_gencc_disease_reference('MONDO:0008426') == (
+        'MONDO:0008426',
+        disease_gene_association_util.OBO['MONDO_0008426'],
+    )
+    assert disease_gene_association_util.to_gencc_disease_reference(None) is None
+    assert disease_gene_association_util.to_gencc_disease_reference('HGNC:5') is None
+
+def test_to_hpo_uri():
+    assert disease_gene_association_util.to_hpo_uri('HP:0000006') == disease_gene_association_util.OBO['HP_0000006']
+    assert disease_gene_association_util.to_hpo_uri('') is None
+
+def test_add_to_mapping():
+    mapping = {
+        '0008426': ['182212'],
+    }
+
+    disease_gene_association_util.add_to_mapping(mapping, '0008426', '182212')
+    disease_gene_association_util.add_to_mapping(mapping, '0008426', '171300')
+    disease_gene_association_util.add_to_mapping(mapping, '0008233', '171300')
+
+    assert mapping == {
+        '0008426': ['182212', '171300'],
+        '0008233': ['171300'],
+    }
+
+def test_extract_mondo_id_from_uri():
+    mock_uri = '    <!-- http://purl.obolibrary.org/obo/MONDO_8000034 -->'
+    result = disease_gene_association_util.extract_mondo_id_from_uri(mock_uri)
+    assert result == '8000034'
+
+def test_is_deprecated_resource():
+    graph = Graph()
+    deprecated_uri = URIRef('http://purl.obolibrary.org/obo/MONDO_9999999')
+    active_uri = URIRef('http://purl.obolibrary.org/obo/MONDO_0008426')
+
+    graph.add((deprecated_uri, disease_gene_association_util.OWL.deprecated, Literal(True)))
+    graph.add((active_uri, disease_gene_association_util.OWL.deprecated, Literal(False)))
+
+    assert disease_gene_association_util.is_deprecated_resource(graph, deprecated_uri) is True
+    assert disease_gene_association_util.is_deprecated_resource(graph, active_uri) is False
+
+def test_extract_omim_id():
+    mock_uri = '<skos:exactMatch rdf:resource="https://omim.org/entry/607948"/>'
+    result = disease_gene_association_util.extract_omim_id(mock_uri)
+    assert result == '607948'
+
+def test_extract_orphanet_id():
+    mock_uri = '<skos:exactMatch rdf:resource="http://www.orpha.net/ORDO/Orphanet_377788"/>'
+    result = disease_gene_association_util.extract_orphanet_id(mock_uri)
+    assert result == '377788'
