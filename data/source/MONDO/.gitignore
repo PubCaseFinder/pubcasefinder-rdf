@@ -1,0 +1,9 @@
+*
+!.gitignore
+
+# this directory has the following structure.
+# .
+# |__.gitignore
+# |__latest -> YYYYmmdd
+# |__YYYYmmdd
+# |__YYYYmmdd

@@ -1,0 +1,66 @@
+from __future__ import annotations
+
+import gc
+from pathlib import Path
+
+from rdflib import URIRef
+
+from utils.log_util import get_logger
+from package.rdf_build_support import load_config
+from package.disease_gene_association_util import (
+    GENCC_SOURCE_URI,
+    MIM,
+    load_gencc_definitive_associations,
+    load_omim_gene_associations,
+    merge_association_maps,
+    write_gene_association_ttl,
+)
+
+logger = get_logger()
+
+
+def disease_gene_omim() -> None:
+    logger.info("start OMIM gene association RDF build")
+    config = load_config("config.ini")
+    omim_ncbi_gene_map = None
+    gencc_associations = None
+
+    try:
+        omim_ncbi_gene_map = load_omim_gene_associations(config["medgen_mim2gene_path"])
+        logger.info("OMIM gene association count: %s", len(omim_ncbi_gene_map))
+
+        gencc_associations = load_gencc_definitive_associations(
+            config["ncbi_gene_info_path"],
+            config["mondo_owl_path"],
+            config["gencc_submissions_path"],
+        )
+        before_merge = len(omim_ncbi_gene_map)
+        merge_association_maps(omim_ncbi_gene_map, gencc_associations.omim_associations)
+        logger.info("GenCC OMIM associations added: %s", len(omim_ncbi_gene_map) - before_merge)
+        gencc_associations = None
+        gc.collect()
+
+        source_uri_map = {
+            "MedGen": URIRef("ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/mim2gene_medgen"),
+            "GenCC": URIRef(GENCC_SOURCE_URI),
+        }
+        output_path = Path(config["rdf_output_dir"]) / "OMIM_Gene_Association.ttl"
+        write_gene_association_ttl(
+            output_path=output_path,
+            associations=omim_ncbi_gene_map,
+            disease_context_prefix="OMIM",
+            disease_namespace_prefix="mim",
+            disease_namespace=MIM,
+            disease_id_prefix="",
+            source_uri_map=source_uri_map,
+        )
+        logger.info("finished OMIM gene association RDF build: output=%s associations=%s", output_path, len(omim_ncbi_gene_map))
+    finally:
+        gencc_associations = None
+        if omim_ncbi_gene_map is not None:
+            omim_ncbi_gene_map.clear()
+        gc.collect()
+
+
+if __name__ == "__main__":
+    disease_gene_omim()
