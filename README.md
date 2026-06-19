@@ -30,8 +30,8 @@ The build has two stages.
    | `hpo_japanese_url` | https://github.com/ogishima/HPO-Japanese/raw/refs/heads/master/HPO-japanese.alpha.21Jul2023.tsv |
    | `genereviews_omim_url` | https://ftp.ncbi.nlm.nih.gov/pub/GeneReviews/NBKid_shortname_OMIM.txt |
 
-   Data that is not listed above must be downloaded manually and placed at the
-   path configured in `scripts/config.ini`.
+   :warning: Data without a configured `*_url` must be prepared manually and
+   placed at the path configured in `scripts/config.ini`.
 
 2. RDF conversion
 
@@ -61,40 +61,12 @@ different layout, set the corresponding `*_path` value in `scripts/config.ini`.
 
 Common local source files include:
 
-| Data | Source |
-| --- | --- |
-| `en_product4.xml` | Orphadata phenotypes associated with rare disorders: http://www.orphadata.org/data/xml/en_product4.xml |
-| `en_product6.xml` | Orphadata genes associated with rare diseases: http://www.orphadata.org/data/xml/en_product6.xml |
-| `nando_gene_association.txt` | PanelSearch disease-gene association data |
-| `shitei_gene_all.txt` | PanelSearch manual disease-gene data |
-| `HPO-japanese.alpha.21Jul2023.tsv` | HPO Japanese labels: https://github.com/ogishima/HPO-Japanese |
-| `HPO_Inheritance_en_jp.txt` | HPO inheritance Japanese mapping |
-| `KEGG_disease.tsv` | KEGG disease data: https://www.kegg.jp/kegg/download/ |
-
-The legacy Java archive also used files such as `HGNC_custom.txt`,
-`OMIM_id_ja.txt`, `HPO_id_ja.txt`, `UR_DBMS_DiseaseLinkOMIM.csv`, and
-`UR_DBMS_DiseaseLink.csv`. Those files are still kept in `data/source` for
-reference and reproducibility of older workflows.
-
-### HGNC Custom File Notes
-
-The archived Java workflow used `HGNC_custom.txt`. To recreate it from
-https://www.genenames.org/download/custom/:
-
-1. Unselect all fields.
-2. Select `HGNC ID` and `Approved symbol` under "Curated by the HGNC".
-3. Select `NCBI Gene ID(supplied by NCBI)` under "Downloaded from external sources".
-4. Select only the `Approved` status.
-5. Submit and download the generated file.
-
-The file should contain columns like:
-
-```text
-HGNC ID    Approved symbol    NCBI Gene ID(supplied by NCBI)
-HGNC:5     A1BG               1
-HGNC:37133 A1BG-AS1           503538
-HGNC:24086 A1CF               29974
-```
+| Config key | Default file | Notes |
+| --- | --- | --- |
+| `ncbi_gene_summary_path` | `gene_summary.tsv.gz` | Generated only when `ncbi_gene_datasets_path` and `ncbi_gene_dataformat_path` are configured. Otherwise, prepare it locally. |
+| `panelsearch_association_path` | `nando_gene_association.txt` | PanelSearch disease-gene association data. |
+| `hpo_inheritance_ja_path` | `HPO_Inheritance_en_jp.txt` | Seed Japanese translation map for HPO inheritance terms. The build reads and updates this file. |
+| `kegg_disease_path` | `KEGG_disease.tsv` | KEGG disease data. |
 
 ## Usage
 
@@ -170,7 +142,11 @@ HGNC:24086 A1CF               29974
    `DATA_SOURCE_DIRECTORY` is mounted as `/data/source` in the container, and
    `RDF_DATA_DIRECTORY` is mounted as `/data/rdf`.
 
-5. Run the full RDF build.
+5. Prepare any local-only source files, such as `nando_gene_association.txt`,
+   `HPO_Inheritance_en_jp.txt`, and `KEGG_disease.tsv`, and place them at the
+   paths configured in `scripts/config.ini`.
+
+6. Run the full RDF build.
 
    ```bash
    docker compose run --rm rdf_create_tools python main.py
