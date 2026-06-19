@@ -1,4 +1,5 @@
 import gc
+from collections.abc import Iterable
 from dataclasses import dataclass
 import gzip
 import os
@@ -12,7 +13,7 @@ from rdflib import Graph, Namespace, URIRef
 from rdflib.namespace import RDFS
 import duckdb
 
-from package.rdf_build_support import load_config
+from package.rdf_build_support import load_config, open_text_writer
 from utils.get_data import download_file
 from utils.log_util import get_logger
 
@@ -229,7 +230,68 @@ def ncbi_gene_summary_helper(
     logger.info('finished get summary process: output=%s', ncbi_gene_summary_path)
     gc.collect()
 
-# 引数: データのURI, データの出力path
+def iter_kegg_omim_mappings(kegg_disease_path: str | Path) -> Iterable[tuple[str, str]]:
+    logger.info("reading KEGG disease OMIM mappings: path=%s", kegg_disease_path)
+    kegg_id = None
+    current_field = None
+    seen_pairs = set()
+
+    with open(kegg_disease_path, encoding="utf-8") as reader:
+        for raw_line in reader:
+            line = raw_line.rstrip("\r\n")
+            if not line:
+                continue
+
+            if line.startswith("///"):
+                kegg_id = None
+                current_field = None
+                continue
+
+            field = line[:12].strip()
+            value = line[12:].strip() if len(line) > 12 else ""
+
+            if field:
+                current_field = field
+                if field == "ENTRY":
+                    kegg_id = value.split()[0] if value else None
+                elif current_field != "DBLINKS":
+                    continue
+            elif current_field == "DBLINKS":
+                value = line.strip()
+            else:
+                continue
+
+            if current_field != "DBLINKS" or kegg_id is None:
+                continue
+
+            match = re.match(r"OMIM:\s*(.+)", value)
+            if match is None:
+                continue
+
+            for omim_id in re.findall(r"\d+", match.group(1)):
+                pair = (omim_id, kegg_id)
+                if pair in seen_pairs:
+                    continue
+                seen_pairs.add(pair)
+                yield pair
+
+    logger.info("read KEGG disease OMIM mappings: path=%s pairs=%s", kegg_disease_path, len(seen_pairs))
+
+
+def create_kegg_disease_omim_tsv(kegg_disease_path: str | Path, output_path: str | Path) -> None:
+    logger.info(
+        "creating KEGG disease OMIM TSV: source=%s output=%s",
+        kegg_disease_path,
+        output_path,
+    )
+    count = 0
+    with open_text_writer(output_path) as writer:
+        for omim_id, kegg_id in iter_kegg_omim_mappings(kegg_disease_path):
+            writer.write(f"{omim_id}\t{kegg_id}\n")
+            count += 1
+    logger.info("created KEGG disease OMIM TSV: output=%s pairs=%s", output_path, count)
+
+
 def download_data_set(data_list: list[set[str]]) -> None:
     for data_uri, data_path in data_list:
         try:

@@ -152,3 +152,49 @@ def test_check_hpo_inheritance_en_ja_returns_false_when_translation_is_missing(t
     )
 
     assert get_data_helper.check_hpo_inheritance_en_ja(inheritance_path) is False
+
+
+def test_iter_kegg_omim_mappings_extracts_omim_links(tmp_path):
+    kegg_path = tmp_path / "disease"
+    kegg_path.write_text(
+        "ENTRY       H00001                      Disease\n"
+        "NAME        Alpha disease\n"
+        "DBLINKS     ICD-11: 123456789\n"
+        "            OMIM: 100100 100200\n"
+        "            MeSH: D000001\n"
+        "///\n"
+        "ENTRY       H00002                      Disease\n"
+        "DBLINKS     OMIM: 100100\n"
+        "            OMIM: 100100 100300\n"
+        "///\n",
+        encoding="utf-8",
+    )
+
+    assert list(get_data_helper.iter_kegg_omim_mappings(kegg_path)) == [
+        ("100100", "H00001"),
+        ("100200", "H00001"),
+        ("100100", "H00002"),
+        ("100300", "H00002"),
+    ]
+
+
+def test_create_kegg_disease_omim_tsv_writes_mapping_file(tmp_path):
+    kegg_path = tmp_path / "disease"
+    output_path = tmp_path / "KEGG_disease.tsv"
+    kegg_path.write_text(
+        "ENTRY       H02129                      Disease\n"
+        "DBLINKS     OMIM: 100100\n"
+        "///\n"
+        "ENTRY       H01413                      Disease\n"
+        "DBLINKS     OMIM: 100300 100400\n"
+        "///\n",
+        encoding="utf-8",
+    )
+
+    get_data_helper.create_kegg_disease_omim_tsv(kegg_path, output_path)
+
+    assert output_path.read_text(encoding="utf-8") == (
+        "100100\tH02129\n"
+        "100300\tH01413\n"
+        "100400\tH01413\n"
+    )
