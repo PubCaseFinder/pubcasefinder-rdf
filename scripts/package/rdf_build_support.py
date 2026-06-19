@@ -59,7 +59,7 @@ def load_config(config_path: str | Path | None = None) -> dict[str, str]:
         'rdf_output_dir': '../data/rdf',
     }
 
-    parser = configparser.ConfigParser(default_config)
+    parser = configparser.ConfigParser(default_config, interpolation=None)
     parser.read(path, encoding='utf-8')
     config = dict(parser['Override'])
 
