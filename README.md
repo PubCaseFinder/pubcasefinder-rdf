@@ -31,7 +31,8 @@ The build has two stages.
    | `genereviews_omim_url` | https://ftp.ncbi.nlm.nih.gov/pub/GeneReviews/NBKid_shortname_OMIM.txt |
 
    :warning: Data without a configured `*_url` must be prepared manually and
-   placed at the path configured in `scripts/config.ini`.
+   placed at the path configured in `scripts/config.ini`. When setting URLs in
+   `scripts/config.ini`, write `%` as `%%`; otherwise config parsing fails.
 
 2. RDF conversion
 
