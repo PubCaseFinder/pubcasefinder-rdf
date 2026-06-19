@@ -14,10 +14,10 @@ medgen_mim2gene_url=
 medgen_omim_hpo_path=
 medgen_omim_hpo_url=
 
-# 以下リポジトリから最新のものをダウンロード
-# https://github.com/Orphanet/Orphadata_aggregated/
 orphanet_product4_path=
+orphanet_product4_url=
 orphanet_product6_path=
+orphanet_product6_url=
 
 mondo_owl_path=
 mondo_owl_url=
@@ -31,12 +31,11 @@ panelsearch_manual_url=
 
 hpo_phenotype_path=
 hpo_phenotype_url=
-hpo_inheritance_path=
 hpo_inheritance_ja_path=
-# 以下リポジトリから最新のものをダウンロード
-# https://github.com/ogishima/HPO-Japanese/tree/master
 hpo_inheritance_url=
+hpo_inheritance_path=
 hpo_japanese_path=
+hpo_japanese_url=
 
 kegg_disease_path=
 

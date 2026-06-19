@@ -20,11 +20,14 @@ The build has two stages.
    | `omim_mim2gene_data_url` | https://www.omim.org/static/omim/data/mim2gene.txt |
    | `medgen_mim2gene_url` | https://ftp.ncbi.nlm.nih.gov/gene/DATA/mim2gene_medgen |
    | `medgen_omim_hpo_url` | https://ftp.ncbi.nlm.nih.gov/pub/medgen/MedGen_HPO_OMIM_Mapping.txt.gz |
+   | `orphanet_product4_url` | https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Rare%20diseases%20with%20associated%20phenotypes/en_product4.xml |
+   | `orphanet_product6_url` | https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Genes%20associated%20with%20rare%20diseases/en_product6.xml |
    | `mondo_owl_url` | https://purl.obolibrary.org/obo/mondo/mondo-international.owl |
    | `gencc_submissions_url` | https://thegencc.org/download/action/submissions-export-tsv |
    | `panelsearch_manual_url` | https://dev-pubcasefinder.dbcls.jp/sparqlist/api/pcf_rdf_nando_gene_association |
    | `hpo_phenotype_url` | http://purl.obolibrary.org/obo/hp/phenotype.hpoa |
    | `hpo_inheritance_url` | http://purl.obolibrary.org/obo/hp.owl |
+   | `hpo_japanese_url` | https://github.com/ogishima/HPO-Japanese/raw/refs/heads/master/HPO-japanese.alpha.21Jul2023.tsv |
    | `genereviews_omim_url` | https://ftp.ncbi.nlm.nih.gov/pub/GeneReviews/NBKid_shortname_OMIM.txt |
 
    Data that is not listed above must be downloaded manually and placed at the
@@ -56,14 +59,14 @@ default config values point to a dated or `latest` layout such as
 `data/source/NCBIGene/latest/Homo_sapiens.gene_info.gz`. If your files are in a
 different layout, set the corresponding `*_path` value in `scripts/config.ini`.
 
-Common manually managed resources include:
+Common local source files include:
 
 | Data | Source |
 | --- | --- |
 | `en_product4.xml` | Orphadata phenotypes associated with rare disorders: http://www.orphadata.org/data/xml/en_product4.xml |
 | `en_product6.xml` | Orphadata genes associated with rare diseases: http://www.orphadata.org/data/xml/en_product6.xml |
 | `nando_gene_association.txt` | PanelSearch disease-gene association data |
-| `shitei_gene_all_250819.txt` | PanelSearch manual disease-gene data |
+| `shitei_gene_all.txt` | PanelSearch manual disease-gene data |
 | `HPO-japanese.alpha.21Jul2023.tsv` | HPO Japanese labels: https://github.com/ogishima/HPO-Japanese |
 | `HPO_Inheritance_en_jp.txt` | HPO inheritance Japanese mapping |
 | `KEGG_disease.tsv` | KEGG disease data: https://www.kegg.jp/kegg/download/ |
@@ -134,7 +137,9 @@ HGNC:24086 A1CF               29974
    medgen_omim_hpo_path=
    medgen_omim_hpo_url=
    orphanet_product4_path=
+   orphanet_product4_url=
    orphanet_product6_path=
+   orphanet_product6_url=
    mondo_owl_path=
    mondo_owl_url=
    gencc_submissions_path=
@@ -144,10 +149,11 @@ HGNC:24086 A1CF               29974
    panelsearch_manual_url=
    hpo_phenotype_path=
    hpo_phenotype_url=
-   hpo_inheritance_path=
    hpo_inheritance_ja_path=
    hpo_inheritance_url=
+   hpo_inheritance_path=
    hpo_japanese_path=
+   hpo_japanese_url=
    kegg_disease_path=
    genereviews_omim_path=
    genereviews_omim_url=

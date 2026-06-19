@@ -47,7 +47,9 @@ def test_load_config(tmp_path):
     medgen_omim_hpo_path={source_root}/MedGen/latest/MedGen_HPO_OMIM_Mapping.txt.gz
     medgen_omim_hpo_url=https://ftp.ncbi.nlm.nih.gov/pub/medgen/MedGen_HPO_OMIM_Mapping.txt.gz
     orphanet_product4_path={source_root}/Orphanet/latest/en_product4.xml
+    orphanet_product4_url=https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Rare%%20diseases%%20with%%20associated%%20phenotypes/en_product4.xml
     orphanet_product6_path={source_root}/Orphanet/latest/en_product6.xml
+    orphanet_product6_url=https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Genes%%20associated%%20with%%20rare%%20diseases/en_product6.xml
     mondo_owl_path={source_root}/MONDO/latest/mondo-international.owl
     mondo_owl_url=https://purl.obolibrary.org/obo/mondo/mondo-international.owl
     gencc_submissions_path={source_root}/GenCC/latest/gencc-submissions.tsv
@@ -61,6 +63,7 @@ def test_load_config(tmp_path):
     hpo_inheritance_url=http://purl.obolibrary.org/obo/hp.owl
     hpo_inheritance_ja_path={source_root}/HPO/latest/HPO_Inheritance_en_jp.txt
     hpo_japanese_path={source_root}/HPO/latest/HPO-japanese.alpha.21Jul2023.tsv
+    hpo_japanese_url=https://github.com/ogishima/HPO-Japanese/raw/refs/heads/master/HPO-japanese.alpha.21Jul2023.tsv
     kegg_disease_path={source_root}/KEGG/latest/KEGG_disease.tsv
     genereviews_omim_path={source_root}/GeneReviews/latest/NBKid_shortname_OMIM.txt
     genereviews_omim_url=https://ftp.ncbi.nlm.nih.gov/pub/GeneReviews/NBKid_shortname_OMIM.txt
@@ -75,6 +78,22 @@ def test_load_config(tmp_path):
     assert config['ncbi_gene_info_path'] == source_root + '/NCBIGene/latest/Homo_sapiens.gene_info.gz'
     assert config['panelsearch_manual_path'] == source_root + '/PanelSearch/latest/shitei_gene_all.txt'
     assert config['hpo_inheritance_path'] == source_root + '/HPO/latest/hp.owl'
+    assert config['orphanet_product4_url'] == 'https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Rare%20diseases%20with%20associated%20phenotypes/en_product4.xml'
+    assert config['orphanet_product6_url'] == 'https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Genes%20associated%20with%20rare%20diseases/en_product6.xml'
+    assert config['hpo_japanese_url'] == 'https://github.com/ogishima/HPO-Japanese/raw/refs/heads/master/HPO-japanese.alpha.21Jul2023.tsv'
+
+
+def test_load_config_uses_defaults_for_omitted_values(tmp_path):
+    config_path = tmp_path / "config.ini"
+    config_path.write_text("[Override]\n", encoding="utf-8")
+
+    config = rdf_build_support.load_config(config_path)
+
+    assert config['orphanet_product4_url'] == 'https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Rare%20diseases%20with%20associated%20phenotypes/en_product4.xml'
+    assert config['orphanet_product6_url'] == 'https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Genes%20associated%20with%20rare%20diseases/en_product6.xml'
+    assert config['panelsearch_manual_url'] == 'https://dev-pubcasefinder.dbcls.jp/sparqlist/api/pcf_rdf_nando_gene_association'
+    assert config['hpo_inheritance_url'] == 'http://purl.obolibrary.org/obo/hp.owl'
+    assert config['hpo_japanese_url'] == 'https://github.com/ogishima/HPO-Japanese/raw/refs/heads/master/HPO-japanese.alpha.21Jul2023.tsv'
 
 
 def test_open_text_writer(tmp_path):
