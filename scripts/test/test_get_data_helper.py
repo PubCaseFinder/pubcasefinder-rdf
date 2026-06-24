@@ -117,8 +117,8 @@ def test_create_hpo_inheritance_en_ja_merges_previous_translations(tmp_path):
     assert inheritance_path.read_text(encoding="utf-8") == (
         "HPO ID\t英語\t日本語\n"
         "HP:0000006\tAutosomal dominant inheritance\t常染色体優性遺伝\n"
-        "HP:0001417\tX-linked inheritance\t\n"
         "HP:0034345\tMendelian inheritance\t\n"
+        "HP:0001417\tX-linked inheritance\t\n"
     )
     assert (tmp_path / "HPO_Inheritance_en_jp_old.txt").read_text(encoding="utf-8") == old_content
     assert (tmp_path / "HPO_Inheritance_en_jp_new.txt").read_text(encoding="utf-8") == (
@@ -147,7 +147,7 @@ def test_check_hpo_inheritance_en_ja_returns_false_when_translation_is_missing(t
         "HPO ID\t英語\t日本語\n"
         "HP:0000006\tAutosomal dominant inheritance\t常染色体優性遺伝\n"
         "HP:0001417\tX-linked inheritance\t\n"
-        "HP:0034345\tMendelian inheritance\n",
+        "HP:0034345\tMendelian inheritance\t\n",
         encoding="utf-8",
     )
 
