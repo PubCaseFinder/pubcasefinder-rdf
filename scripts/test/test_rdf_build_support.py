@@ -65,6 +65,8 @@ def test_load_config(tmp_path):
     hpo_japanese_path={source_root}/HPO/latest/HPO-japanese.alpha.21Jul2023.tsv
     hpo_japanese_url=https://github.com/ogishima/HPO-Japanese/raw/refs/heads/master/HPO-japanese.alpha.21Jul2023.tsv
     kegg_disease_path={source_root}/KEGG/latest/KEGG_disease.tsv
+    kegg_disease_source_path={source_root}/KEGG/latest/disease
+    kegg_disease_source_url=https://www.genome.jp/ftp/kegg/medicus/disease/disease
     genereviews_omim_path={source_root}/GeneReviews/latest/NBKid_shortname_OMIM.txt
     genereviews_omim_url=https://ftp.ncbi.nlm.nih.gov/pub/GeneReviews/NBKid_shortname_OMIM.txt
     rdf_output_dir={rdf_output_dir}
@@ -81,6 +83,8 @@ def test_load_config(tmp_path):
     assert config['orphanet_product4_url'] == 'https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Rare%20diseases%20with%20associated%20phenotypes/en_product4.xml'
     assert config['orphanet_product6_url'] == 'https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Genes%20associated%20with%20rare%20diseases/en_product6.xml'
     assert config['hpo_japanese_url'] == 'https://github.com/ogishima/HPO-Japanese/raw/refs/heads/master/HPO-japanese.alpha.21Jul2023.tsv'
+    assert config['kegg_disease_source_path'] == source_root + '/KEGG/latest/disease'
+    assert config['kegg_disease_source_url'] == 'https://www.genome.jp/ftp/kegg/medicus/disease/disease'
 
 
 def test_load_config_uses_defaults_for_omitted_values(tmp_path):

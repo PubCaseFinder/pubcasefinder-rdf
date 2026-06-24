@@ -198,3 +198,23 @@ def test_create_kegg_disease_omim_tsv_writes_mapping_file(tmp_path):
         "100300\tH01413\n"
         "100400\tH01413\n"
     )
+
+
+def test_create_configured_kegg_disease_omim_tsv_writes_mapping_file(tmp_path):
+    kegg_path = tmp_path / "disease"
+    output_path = tmp_path / "KEGG_disease.tsv"
+    kegg_path.write_text(
+        "ENTRY       H02129                      Disease\n"
+        "DBLINKS     OMIM: 100100\n"
+        "///\n",
+        encoding="utf-8",
+    )
+
+    get_data_helper.create_configured_kegg_disease_omim_tsv(
+        {
+            "kegg_disease_source_path": str(kegg_path),
+            "kegg_disease_path": str(output_path),
+        }
+    )
+
+    assert output_path.read_text(encoding="utf-8") == "100100\tH02129\n"

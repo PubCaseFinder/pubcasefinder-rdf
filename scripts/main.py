@@ -35,7 +35,7 @@ def should_run_ncbi_gene_summary(
     else:
         return True
 
-def create_download_data_list(config: dict[str, str]) -> list[str]:
+def create_download_data_list(config: dict[str, str]) -> list[tuple[str, str]]:
     download_data_list = []
     for key in config:
         if not key.endswith('url'):
@@ -96,6 +96,8 @@ def main() -> None:
     download_data_list = create_download_data_list(config)
     if download_data_list != []:
         get_data_helper.download_data_set(download_data_list)
+
+    get_data_helper.create_configured_kegg_disease_omim_tsv(config)
 
     inheritance_map_list = get_data_helper.update_hpo_subclass(config['hpo_inheritance_path'], '0000005')
     get_data_helper.create_hpo_inheritance_en_ja(config['hpo_inheritance_ja_path'], inheritance_map_list)

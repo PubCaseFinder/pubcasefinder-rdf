@@ -38,6 +38,8 @@ hpo_japanese_path=
 hpo_japanese_url=
 
 kegg_disease_path=
+kegg_disease_source_path=../data/source/KEGG/latest/disease
+kegg_disease_source_url=
 
 genereviews_omim_path=
 genereviews_omim_url=

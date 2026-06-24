@@ -28,6 +28,7 @@ The build has two stages.
    | `hpo_phenotype_url` | http://purl.obolibrary.org/obo/hp/phenotype.hpoa |
    | `hpo_inheritance_url` | http://purl.obolibrary.org/obo/hp.owl |
    | `hpo_japanese_url` | https://github.com/ogishima/HPO-Japanese/raw/refs/heads/master/HPO-japanese.alpha.21Jul2023.tsv |
+   | `kegg_disease_source_url` | https://www.genome.jp/ftp/kegg/medicus/disease/disease |
    | `genereviews_omim_url` | https://ftp.ncbi.nlm.nih.gov/pub/GeneReviews/NBKid_shortname_OMIM.txt |
 
    :warning: Data without a configured `*_url` must be prepared manually and
@@ -66,7 +67,8 @@ Common local source files include:
 | `ncbi_gene_summary_path` | `gene_summary.tsv.gz` | Generated only when `ncbi_gene_datasets_path` and `ncbi_gene_dataformat_path` are configured. Otherwise, prepare it locally. |
 | `panelsearch_association_path` | `nando_gene_association.txt` | PanelSearch disease-gene association data. |
 | `hpo_inheritance_ja_path` | `HPO_Inheritance_en_jp.txt` | Seed Japanese translation map for HPO inheritance terms. The build reads and updates this file. |
-| `kegg_disease_path` | `KEGG_disease.tsv` | KEGG disease data. |
+| `kegg_disease_source_path` | `disease` | Raw KEGG MEDICUS disease data. When present, the build uses it to generate `KEGG_disease.tsv`. |
+| `kegg_disease_path` | `KEGG_disease.tsv` | Generated OMIM-to-KEGG disease map used by disease metadata RDF. |
 
 ## Usage
 
@@ -127,6 +129,8 @@ Common local source files include:
    hpo_japanese_path=
    hpo_japanese_url=
    kegg_disease_path=
+   kegg_disease_source_path=
+   kegg_disease_source_url=
    genereviews_omim_path=
    genereviews_omim_url=
    rdf_output_dir=
@@ -142,9 +146,7 @@ Common local source files include:
    `DATA_SOURCE_DIRECTORY` is mounted as `/data/source` in the container, and
    `RDF_DATA_DIRECTORY` is mounted as `/data/rdf`.
 
-5. Prepare any local-only source files, such as `nando_gene_association.txt`,
-   `HPO_Inheritance_en_jp.txt`, and `KEGG_disease.tsv`, and place them at the
-   paths configured in `scripts/config.ini`.
+5. Prepare any local-only source files, such as `nando_gene_association.txt` and `HPO_Inheritance_en_jp.txt`.
 
 6. Run the full RDF build.
 
