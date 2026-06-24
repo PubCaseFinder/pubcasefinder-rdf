@@ -65,8 +65,6 @@ def test_load_config(tmp_path):
     hpo_japanese_path={source_root}/HPO/latest/HPO-japanese.alpha.21Jul2023.tsv
     hpo_japanese_url=https://github.com/ogishima/HPO-Japanese/raw/refs/heads/master/HPO-japanese.alpha.21Jul2023.tsv
     kegg_disease_path={source_root}/KEGG/latest/KEGG_disease.tsv
-    kegg_disease_source_path={source_root}/KEGG/latest/disease
-    kegg_disease_source_url=https://www.genome.jp/ftp/kegg/medicus/disease/disease
     genereviews_omim_path={source_root}/GeneReviews/latest/NBKid_shortname_OMIM.txt
     genereviews_omim_url=https://ftp.ncbi.nlm.nih.gov/pub/GeneReviews/NBKid_shortname_OMIM.txt
     rdf_output_dir={rdf_output_dir}
@@ -83,8 +81,6 @@ def test_load_config(tmp_path):
     assert config['orphanet_product4_url'] == 'https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Rare%20diseases%20with%20associated%20phenotypes/en_product4.xml'
     assert config['orphanet_product6_url'] == 'https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Genes%20associated%20with%20rare%20diseases/en_product6.xml'
     assert config['hpo_japanese_url'] == 'https://github.com/ogishima/HPO-Japanese/raw/refs/heads/master/HPO-japanese.alpha.21Jul2023.tsv'
-    assert config['kegg_disease_source_path'] == source_root + '/KEGG/latest/disease'
-    assert config['kegg_disease_source_url'] == 'https://www.genome.jp/ftp/kegg/medicus/disease/disease'
 
 
 def test_load_config_uses_defaults_for_omitted_values(tmp_path):
@@ -98,6 +94,16 @@ def test_load_config_uses_defaults_for_omitted_values(tmp_path):
     assert config['panelsearch_manual_url'] == 'https://dev-pubcasefinder.dbcls.jp/sparqlist/api/pcf_rdf_nando_gene_association'
     assert config['hpo_inheritance_url'] == 'http://purl.obolibrary.org/obo/hp.owl'
     assert config['hpo_japanese_url'] == 'https://github.com/ogishima/HPO-Japanese/raw/refs/heads/master/HPO-japanese.alpha.21Jul2023.tsv'
+
+
+def test_load_config_uses_kegg_source_defaults_for_omitted_values(tmp_path):
+    config_path = tmp_path / "config.ini"
+    config_path.write_text("[Override]\n", encoding="utf-8")
+
+    config = rdf_build_support.load_config(config_path)
+
+    assert config['kegg_disease_source_path'] == '../data/source/KEGG/latest/disease'
+    assert config['kegg_disease_source_url'] == ''
 
 
 def test_open_text_writer(tmp_path):
