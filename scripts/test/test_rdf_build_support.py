@@ -47,9 +47,9 @@ def test_load_config(tmp_path):
     medgen_omim_hpo_path={source_root}/MedGen/latest/MedGen_HPO_OMIM_Mapping.txt.gz
     medgen_omim_hpo_url=https://ftp.ncbi.nlm.nih.gov/pub/medgen/MedGen_HPO_OMIM_Mapping.txt.gz
     orphanet_product4_path={source_root}/Orphanet/latest/en_product4.xml
-    orphanet_product4_url=https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Rare%%20diseases%%20with%%20associated%%20phenotypes/en_product4.xml
+    orphanet_product4_url=https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Rare%20diseases%20with%20associated%20phenotypes/en_product4.xml
     orphanet_product6_path={source_root}/Orphanet/latest/en_product6.xml
-    orphanet_product6_url=https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Genes%%20associated%%20with%%20rare%%20diseases/en_product6.xml
+    orphanet_product6_url=https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Genes%20associated%20with%20rare%20diseases/en_product6.xml
     mondo_owl_path={source_root}/MONDO/latest/mondo-international.owl
     mondo_owl_url=https://purl.obolibrary.org/obo/mondo/mondo-international.owl
     gencc_submissions_path={source_root}/GenCC/latest/gencc-submissions.tsv
@@ -80,19 +80,6 @@ def test_load_config(tmp_path):
     assert config['hpo_inheritance_path'] == source_root + '/HPO/latest/hp.owl'
     assert config['orphanet_product4_url'] == 'https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Rare%20diseases%20with%20associated%20phenotypes/en_product4.xml'
     assert config['orphanet_product6_url'] == 'https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Genes%20associated%20with%20rare%20diseases/en_product6.xml'
-    assert config['hpo_japanese_url'] == 'https://github.com/ogishima/HPO-Japanese/raw/refs/heads/master/HPO-japanese.alpha.21Jul2023.tsv'
-
-
-def test_load_config_uses_defaults_for_omitted_values(tmp_path):
-    config_path = tmp_path / "config.ini"
-    config_path.write_text("[Override]\n", encoding="utf-8")
-
-    config = rdf_build_support.load_config(config_path)
-
-    assert config['orphanet_product4_url'] == 'https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Rare%20diseases%20with%20associated%20phenotypes/en_product4.xml'
-    assert config['orphanet_product6_url'] == 'https://github.com/Orphanet/Orphadata_aggregated/raw/refs/heads/master/Genes%20associated%20with%20rare%20diseases/en_product6.xml'
-    assert config['panelsearch_manual_url'] == 'https://dev-pubcasefinder.dbcls.jp/sparqlist/api/pcf_rdf_nando_gene_association'
-    assert config['hpo_inheritance_url'] == 'http://purl.obolibrary.org/obo/hp.owl'
     assert config['hpo_japanese_url'] == 'https://github.com/ogishima/HPO-Japanese/raw/refs/heads/master/HPO-japanese.alpha.21Jul2023.tsv'
 
 

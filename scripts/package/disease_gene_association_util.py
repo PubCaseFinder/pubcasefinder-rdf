@@ -143,7 +143,7 @@ def load_gencc_submission_records(
     con = duckdb.connect()
     query_statement = f"""
         select
-            uuid,
+            sgc_id,
             gene_curie,
             disease_original_curie,
             submitted_as_submitter_id,
