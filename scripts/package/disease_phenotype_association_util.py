@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
+import re
 import xml.etree.ElementTree as ET
 
 import duckdb
@@ -70,7 +72,13 @@ def load_ordo_frequency_annotations(orphanet_product4_path: str | Path) -> dict[
                     continue
 
                 key = f"{orpha_code.text.strip()}\t{normalize_hpo_id(hpo_id_element.text)}"
-                frequencies.setdefault(key, frequency_label)
+                # Prefer a positive frequency if duplicate source records conflict.
+                if (frequencies.get(key) == "Excluded (0%)"
+                        and frequency_label in ORDO_FREQUENCY_TO_HPO
+                        and frequency_label != "Excluded (0%)"):
+                    frequencies[key] = frequency_label
+                else:
+                    frequencies.setdefault(key, frequency_label)
 
     logger.info("loaded Orphanet frequency annotations: path=%s annotations=%s", orphanet_product4_path, len(frequencies))
     return frequencies
@@ -88,34 +96,75 @@ def load_manual_phenotype_associations(
     manual_associations: dict[str, str] = {}
     prefix = f"{disease_prefix}:"
 
-    con = duckdb.connect()
-    query_statement = f"""
+    # Only leading metadata is a comment; disease names can contain literal '#'.
+    skip_rows = 0
+    with Path(phenotype_hpoa_path).open(encoding="utf-8-sig") as stream:
+        for line in stream:
+            if line.startswith("#") or not line.strip():
+                skip_rows += 1
+            else:
+                break
+    query_statement = """
         select
-            replace(database_id, '{prefix}', ''),
-            replace(hpo_id, 'HP:', '')
+            trim(database_id),
+            trim(hpo_id),
+            coalesce(trim(qualifier), ''),
+            coalesce(trim(frequency), '')
         from
-            read_csv('{phenotype_hpoa_path}', delim='\t')
+            read_csv(?, delim='\t', header=true, skip=?, all_varchar=true)
         where
-            prefix(database_id, '{prefix}')
+            starts_with(trim(database_id), ?)
         """
-    res = con.execute(query_statement)
-
-    while True:
-        row = res.fetchone()
-        if row is None:
-            break
-        disease_id = row[0]
-        hpo_id = row[1]
-        key = f"{disease_id}\t{hpo_id}"
-        manual_associations.setdefault(key, "Manual")
+    excluded_rows = 0
+    with duckdb.connect() as con:
+        res = con.execute(query_statement, [str(phenotype_hpoa_path), skip_rows, prefix])
+        while (row := res.fetchone()) is not None:
+            database_id, hpo_id, qualifier, frequency = row
+            if qualifier == "NOT":
+                excluded_rows += 1
+                continue
+            if qualifier:
+                raise ValueError(f"Unexpected HPOA qualifier for {database_id} / {hpo_id}: {qualifier!r}")
+            try:
+                absent = is_zero_frequency(frequency)
+            except ValueError as exc:
+                raise ValueError(f"Invalid HPOA frequency for {database_id} / {hpo_id}: {frequency!r}") from exc
+            if absent:
+                excluded_rows += 1
+                continue
+            # Filter records before deduplication: an independent positive row survives.
+            key = f"{database_id.removeprefix(prefix)}\t{normalize_hpo_id(hpo_id)}"
+            manual_associations.setdefault(key, "Manual")
 
     logger.info(
-        "loaded manual phenotype associations: path=%s disease_prefix=%s associations=%s",
+        "loaded manual phenotype associations: path=%s disease_prefix=%s associations=%s excluded_rows=%s",
         phenotype_hpoa_path,
         disease_prefix,
         len(manual_associations),
+        excluded_rows,
     )
     return manual_associations
+
+
+def is_zero_frequency(frequency: str) -> bool:
+    """Recognize absence without treating an unspecified frequency as zero."""
+    frequency = frequency.strip()
+    if not frequency:
+        return False
+    if frequency in {f"HP:{term}" for term in ORDO_FREQUENCY_TO_HPO.values()}:
+        return frequency == "HP:0040285"
+    fraction = re.fullmatch(r"(\d+)/(\d+)", frequency)
+    if fraction:
+        count, total = map(int, fraction.groups())
+        if total > 0 and count <= total:
+            return count == 0
+    percentage = re.fullmatch(r"(\d+(?:\.\d+)?)%", frequency)
+    if percentage:
+        value = Decimal(percentage.group(1))
+        if value <= 100:
+            return value == 0
+    raise ValueError(f"Invalid HPOA frequency: {frequency!r}")
+
 
 def extract_frequency_label(hpo_frequency_element: ET.Element | None) -> str | None:
     if hpo_frequency_element is None:
@@ -249,6 +298,13 @@ def build_ordo_annotations(
     for key in manual_associations:
         ordo_id, hpo_id = key.split("\t")
         frequency_label = frequency_by_association.get(key)
+        if frequency_label == "Excluded (0%)":
+            # Membership comes from filtered HPOA positives; product 4 only adds frequency.
+            logger.warning(
+                "Orphanet frequency conflicts with positive HPOA association: ORPHA:%s HP:%s; omitting frequency",
+                ordo_id, hpo_id,
+            )
+            frequency_label = None
         annotations.append(
             OrdoPhenotypeAnnotation(
                 ordo_id=ordo_id,
