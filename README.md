@@ -186,6 +186,59 @@ package.hp_ja
 
 ## Validating RDF in Virtuoso
 
+### Rebuilding Disease-Phenotype Associations
+
+The HPOA loader excludes individual records with `qualifier=NOT` or zero
+frequency (`0/N` with a positive denominator, `0%`, or `HP:0040285`) before
+deduplicating disease-HPO pairs. An unspecified frequency is not zero. A pair
+with an independent positive record is retained; other associations for the
+same disease or gene are not removed. Unsupported qualifiers or malformed
+frequencies on non-negated records stop the build instead of silently becoming
+positive associations.
+
+HPOA determines which associations are emitted. Orphanet product 4 enriches
+retained associations with frequency; it does not create additional pairs.
+When duplicate product-4 records contain both excluded and positive frequency
+categories, the positive category is used. If product 4 only reports
+`Excluded (0%)` for a retained HPOA positive pair, the build logs the conflict
+and omits that frequency rather than deleting the positive association or
+marking it as excluded. Review such conflicts against the source versions.
+
+To regenerate only the two affected files, set `hpo_phenotype_path`,
+`orphanet_product4_path`, and `rdf_output_dir` in `scripts/config.ini`, then run
+from the repository root:
+
+```bash
+docker compose build rdf_create_tools
+docker compose run --rm rdf_create_tools python -m package.disease_phenotype_omim
+docker compose run --rm rdf_create_tools python -m package.disease_phenotype_ordo
+```
+
+The outputs are `OMIM_HP_Association.ttl` and `Orphanet_HP_Association.ttl`
+under `rdf_output_dir`. Use recorded versions of both source files. There is
+no need to rebuild unrelated RDF outputs for this correction.
+
+Validate the outputs in a separate database before deployment. Replacing TTL
+files on disk does not change an already loaded database. Replace the old
+association data in every serving RDF store, including the RDF Portal copy,
+rather than appending the new triples. The per-file graph example below is
+only applicable when each file has its own graph. If deployment combines all
+files into one graph, do not clear that graph and reload only these two files;
+rebuild the combined graph from the full RDF set with these two files replaced.
+Refresh affected query caches and check whether derived ranking data needs
+rebuilding. Temporary SPARQList exclusion filters are unnecessary once all
+relevant serving stores use the corrected associations.
+
+Run the regression suite using the locked dependencies:
+
+```bash
+cd scripts
+uv sync --frozen
+uv run --frozen python -X utf8 -m pytest test
+```
+
+### Disposable Test Database
+
 You can load the generated Turtle files into a disposable Virtuoso container for
 local checks. The example below loads each `xxx.ttl` file into the graph
 `https://pubcasefinder.dbcls.jp/rdf/xxx`.
